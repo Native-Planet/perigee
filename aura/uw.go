@@ -28,29 +28,6 @@ func init() {
 		reverseMapping[c] = i
 	}
 }
-func encodeBigInt(value *big.Int) string {
-	if value.Sign() == 0 {
-		return "0w0"
-	}
-	var chars []byte
-	tmp := new(big.Int).Set(value)
-	for tmp.Sign() > 0 {
-		chunk := new(big.Int).And(tmp, big.NewInt(63))
-		chars = append(chars, mapping[int(chunk.Int64())])
-		tmp.Rsh(tmp, 6)
-	}
-	for i := 0; i < len(chars)/2; i++ {
-		chars[i], chars[len(chars)-1-i] = chars[len(chars)-1-i], chars[i]
-	}
-	var result []byte
-	for i := len(chars) - 1; i >= 0; i-- {
-		if (len(chars)-1-i) > 0 && (len(chars)-1-i)%5 == 0 {
-			result = append([]byte{'.'}, result...)
-		}
-		result = append([]byte{chars[i]}, result...)
-	}
-	return "0w" + string(result)
-}
 
 func Uint642Uw(n uint64) string {
 	return encodeBigInt(new(big.Int).SetUint64(n))
@@ -115,8 +92,10 @@ func Uw2Cord(s string) (string, error) {
 	return string(bytes), nil
 }
 
+// helpers
+
 func decodeToBigInt(uw string) (*big.Int, error) {
-	if uw == "0w0" {
+	if uw == "0w0" { // whats dis
 		return big.NewInt(0), nil
 	}
 	if !strings.HasPrefix(uw, "0w") {
@@ -134,4 +113,28 @@ func decodeToBigInt(uw string) (*big.Int, error) {
 		value.Or(value, big.NewInt(int64(v)))
 	}
 	return value, nil
+}
+
+func encodeBigInt(value *big.Int) string {
+	if value.Sign() == 0 {
+		return "0w0"
+	}
+	var chars []byte
+	tmp := new(big.Int).Set(value)
+	for tmp.Sign() > 0 {
+		chunk := new(big.Int).And(tmp, big.NewInt(63))
+		chars = append(chars, mapping[int(chunk.Int64())])
+		tmp.Rsh(tmp, 6)
+	}
+	for i := 0; i < len(chars)/2; i++ {
+		chars[i], chars[len(chars)-1-i] = chars[len(chars)-1-i], chars[i]
+	}
+	var result []byte
+	for i := len(chars) - 1; i >= 0; i-- {
+		if (len(chars)-1-i) > 0 && (len(chars)-1-i)%5 == 0 {
+			result = append([]byte{'.'}, result...)
+		}
+		result = append([]byte{chars[i]}, result...)
+	}
+	return "0w" + string(result)
 }

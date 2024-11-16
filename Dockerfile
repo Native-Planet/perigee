@@ -1,9 +1,9 @@
 FROM docker.io/library/golang:1.23.2 AS builder
 WORKDIR /app
-COPY perigee/go.mod go.mod
-COPY perigee/go.sum go.sum
+COPY go.mod go.mod
+COPY go.sum go.sum
 RUN go mod download
-COPY perigee/ /app/
+COPY ./ /app/
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o app main.go
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /

@@ -9,10 +9,10 @@ import (
 
 	"perigee/roller"
 	"perigee/types"
-	"perigee/wallet"
 
 	"github.com/deelawn/urbit-gob/co"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/nathanlever/keygen"
 	"go.uber.org/zap"
 )
 
@@ -43,13 +43,18 @@ func Auth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func GenerateWallet(log *zap.Logger) http.HandlerFunc {
+func GetWallet(log *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		shipParam := r.URL.Query().Get("ship")
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		shipParam := r.URL.Query().Get("point")
 		ticket := r.URL.Query().Get("ticket")
 		revisionParam := r.URL.Query().Get("revision")
+		passphrase := r.URL.Query().Get("passpharse")
 		if shipParam == "" || ticket == "" {
-			http.Error(w, "Missing 'ship' or 'ticket' query parameter", http.StatusBadRequest)
+			http.Error(w, "Missing 'point' or 'ticket' query parameter", http.StatusBadRequest)
 			return
 		}
 		bigPoint, err := co.Patp2Point(shipParam)
@@ -66,16 +71,7 @@ func GenerateWallet(log *zap.Logger) http.HandlerFunc {
 			}
 		}
 		log.Info("Generate wallet", zap.String("ship", shipParam), zap.Int("revision", revision))
-		walletData, err := wallet.GenerateWallet(types.WalletConfig{
-			Ticket:   ticket,
-			Ship:     uint32(bigPoint.Int64()),
-			Revision: uint32(revision),
-			Boot:     true,
-		})
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error generating wallet: %v", err), http.StatusInternalServerError)
-			return
-		}
+		walletData := keygen.GenerateWallet(ticket, uint32(bigPoint.Int64()), passphrase, uint(revision), true)
 		jsonData, err := json.MarshalIndent(types.WalletResp{Wallet: walletData}, "", "  ")
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error marshaling response: %v", err), http.StatusInternalServerError)
@@ -88,14 +84,14 @@ func GenerateWallet(log *zap.Logger) http.HandlerFunc {
 
 func GetPoint(log *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.PointReq
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, fmt.Sprintf("Error decoding request: %v", err), http.StatusBadRequest)
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		patp, _, err := types.UnmarshalPoint(req.Point)
+		shipParam := r.URL.Query().Get("point")
+		patp, _, err := types.ParsePointParam(shipParam)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid point: %v", err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Error reading @p: %v", err), http.StatusInternalServerError)
 			return
 		}
 		pointInfo, err := roller.Client.GetPoint(r.Context(), patp)
@@ -120,6 +116,10 @@ func GetPoint(log *zap.Logger) http.HandlerFunc {
 
 func GetPending(log *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		ships, err := roller.Client.GetAllPending(r.Context())
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error getting pending ships: %v", err), http.StatusInternalServerError)
@@ -138,6 +138,10 @@ func GetPending(log *zap.Logger) http.HandlerFunc {
 
 func ModBreach(log *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		var req types.BreachReq
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, fmt.Sprintf("Error decoding request: %v", err), http.StatusBadRequest)
@@ -159,17 +163,7 @@ func ModBreach(log *zap.Logger) http.HandlerFunc {
 			return
 		}
 		rev += 1
-		wallet, err := wallet.GenerateWallet(types.WalletConfig{
-			Ticket:     req.Ticket,
-			Ship:       uint32(p),
-			Passphrase: req.Passphrase,
-			Revision:   uint32(rev),
-			Boot:       true,
-		})
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error generating point info: %v", err), http.StatusInternalServerError)
-			return
-		}
+		wallet := keygen.GenerateWallet(req.Ticket, uint32(p), req.Passphrase, uint(rev), true)
 		privKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Invalid key material: %v", err), http.StatusInternalServerError)

@@ -1,5 +1,8 @@
 package wallet
 
+// the day after i made this pyry told me about a library someone already made that does this
+// https://github.com/nathanlever/keygen  lol
+// his is cleaner so we just use that, dead code ahead
 import (
 	"encoding/hex"
 	"errors"

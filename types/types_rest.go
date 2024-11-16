@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/deelawn/urbit-gob/co"
@@ -12,10 +14,6 @@ import (
 type WalletResp struct {
 	Wallet interface{} `json:"wallet"`
 	Error  string      `json:"error,omitempty"`
-}
-
-type PointReq struct {
-	Point json.RawMessage `json:"point"`
 }
 
 type PointResp struct {
@@ -47,6 +45,32 @@ func UnmarshalPoint(raw json.RawMessage) (string, uint32, error) {
 	}
 
 	return "", 0, fmt.Errorf("point must be a string or number")
+}
+
+// get the point from a url param string
+func ParsePointParam(param string) (string, uint32, error) {
+	if param == "" {
+		return "", 0, fmt.Errorf("point parameter is required")
+	}
+	decoded, err := url.QueryUnescape(param)
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid URL encoding: %v", err)
+	}
+	if num, err := strconv.ParseInt(decoded, 10, 64); err == nil {
+		if num < 0 {
+			return "", 0, fmt.Errorf("point cannot be negative")
+		}
+		patp, err := co.Point2Patp(big.NewInt(num))
+		if err != nil {
+			return "", 0, fmt.Errorf("invalid point number: %v", err)
+		}
+		return ensureTildePrefix(patp), uint32(num), nil
+	}
+	patp, point, err := validateAndNormalizePatp(decoded)
+	if err != nil {
+		return "", 0, err
+	}
+	return ensureTildePrefix(patp), point, nil
 }
 
 // get a point and an int back

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"perigee/roller"
 	"perigee/types"
@@ -131,6 +132,58 @@ func GetPending(log *zap.Logger) http.HandlerFunc {
 			return
 		}
 		log.Info("Get pending", zap.String("address", string(jsonData)))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonData)
+	}
+}
+
+func GetKeyfile(log *zap.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		patp := r.URL.Query().Get("point")
+		ticket := r.URL.Query().Get("ticket")
+		point, err := roller.Client.GetPoint(r.Context(), patp)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error retrieving point info: %v", err), http.StatusInternalServerError)
+			return
+		}
+		bigPoint, err := co.Patp2Point(patp)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error converting point: %v", err), http.StatusInternalServerError)
+			return
+		}
+		life, err := strconv.Atoi(point.Network.Keys.Life)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error casting azimuth life: %v", err), http.StatusInternalServerError)
+			return
+		}
+		life -= 1
+		wallet := keygen.GenerateWallet(ticket, uint32(bigPoint.Uint64()), "", uint(life), true)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error generating wallet: %v", err), http.StatusInternalServerError)
+			return
+		}
+		pointKey := strings.TrimPrefix(point.Network.Keys.Crypt, "0x")
+		if wallet.Network.Keys.Crypt.Public != pointKey {
+			http.Error(w, fmt.Sprintf("could not generate matching keyfile; 0x%s / %s", wallet.Network.Keys.Crypt.Public, point.Network.Keys.Crypt), http.StatusInternalServerError)
+			return
+		}
+		keyfile, err := roller.Keyfile(wallet.Network.Keys.Crypt.Private, wallet.Network.Keys.Auth.Private, patp, life)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not generate keyfile: %v", err), http.StatusInternalServerError)
+		}
+		resp := types.ShipKeyfile{
+			Point:   patp,
+			Keyfile: keyfile,
+		}
+		jsonData, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error marshaling response: %v", err), http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(jsonData)
 	}

@@ -152,6 +152,11 @@ type ShipInfo struct {
 	Address string `json:"address"`
 }
 
+type ShipKeyfile struct {
+	Point   string `json:"point"`
+	Keyfile string `json:"keyfile"`
+}
+
 type RawTx struct {
 	Tx struct {
 		Data struct {

@@ -3,11 +3,15 @@ package roller
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"net/http"
 	"os"
 
+	"perigee/aura"
 	"perigee/types"
+
+	"github.com/stevelacy/go-urbit/noun"
 )
 
 var (
@@ -129,18 +133,6 @@ func ValidatePoint(point interface{}, strip bool) (*big.Int, error) {
 func ValidatePrivateKey(privateKey *ecdsa.PrivateKey) error {
 	return types.ValidatePrivateKey(privateKey)
 }
-
-// generate @uw keyfile
-
-package roller
-
-import (
-	"fmt"
-	"groundseg/aura"
-	"math/big"
-
-	"github.com/stevelacy/go-urbit/noun"
-)
 
 func keyNoun(point *big.Int, revision int, bnsec *big.Int) noun.Cell {
 	return noun.MakeNoun([]interface{}{

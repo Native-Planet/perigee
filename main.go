@@ -22,6 +22,8 @@ func main() {
 	http.HandleFunc("/v1/get/point", handlers.Auth(handlers.GetPoint(log)))
 	// list pending rollup queue
 	http.HandleFunc("/v1/get/pending", handlers.Auth(handlers.GetPending(log)))
+	// turn a master ticket into a keyfile
+	http.HandleFunc("/v1/get/keyfile", handlers.Auth(handlers.GetKeyfile(log)))
 	// breach a point
 	http.HandleFunc("/v1/mod/breach", handlers.Auth(handlers.ModBreach(log)))
 

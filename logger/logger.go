@@ -7,28 +7,32 @@ import (
 )
 
 var (
-	once   sync.Once
-	logger *zap.Logger
+	once sync.Once
+	log  *zap.Logger
 )
 
 func Init() error {
 	var err error
 	once.Do(func() {
-		logger, err = zap.NewProduction()
+		config := zap.NewProductionConfig()
+		config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+		config.OutputPaths = []string{"stdout"}
+
+		log, err = config.Build()
 		if err != nil {
 			return
 		}
-		zap.ReplaceGlobals(logger)
+		zap.ReplaceGlobals(log)
 	})
 	return err
 }
 
 func GetLogger() *zap.Logger {
-	return logger
+	return zap.L()
 }
 
 func Sync() {
-	if logger != nil {
-		_ = logger.Sync()
+	if log != nil {
+		_ = log.Sync()
 	}
 }

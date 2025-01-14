@@ -45,6 +45,9 @@ github.com/ethereum/go-ethereum/rlp/internal/rlpstruct
 # github.com/holiman/uint256 v1.3.1
 ## explicit; go 1.19
 github.com/holiman/uint256
+# github.com/inconshreveable/mousetrap v1.1.0
+## explicit; go 1.18
+github.com/inconshreveable/mousetrap
 # github.com/nathanlever/keygen v0.0.0-unpublished => github.com/nathanlever/keygen v0.1.1-0.20210804120817-7b7dba5c1281
 ## explicit; go 1.16
 github.com/nathanlever/keygen
@@ -54,6 +57,12 @@ github.com/pkova/argon2
 # github.com/spaolacci/murmur3 v1.1.0
 ## explicit
 github.com/spaolacci/murmur3
+# github.com/spf13/cobra v1.8.1
+## explicit; go 1.15
+github.com/spf13/cobra
+# github.com/spf13/pflag v1.0.5
+## explicit; go 1.12
+github.com/spf13/pflag
 # github.com/stevelacy/go-urbit v0.0.0-20221028001655-e606f41f727c
 ## explicit; go 1.16
 github.com/stevelacy/go-urbit/noun

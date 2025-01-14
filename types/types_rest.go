@@ -27,10 +27,29 @@ type BreachReq struct {
 	Passphrase string          `json:"passphrase"`
 }
 
+type EscapeReq struct {
+	Point      json.RawMessage `json:"point"`
+	Sponsor    json.RawMessage `json:"sponsor"`
+	Ticket     string          `json:"ticket"`
+	Passphrase string          `json:"passphrase"`
+}
+
+type AdoptReq struct {
+	Point      json.RawMessage `json:"point"`
+	Adoptee    json.RawMessage `json:"adoptee"`
+	Ticket     string          `json:"ticket"`
+	Passphrase string          `json:"passphrase"`
+}
+
+type TicketResp struct {
+	Ship   string `json:"ship"`
+	Ticket string `json:"ticket"`
+}
+
 func UnmarshalPoint(raw json.RawMessage) (string, uint32, error) {
 	var strPoint string
 	if err := json.Unmarshal(raw, &strPoint); err == nil {
-		return validateAndNormalizePatp(strPoint)
+		return ValidateAndNormalizePatp(strPoint)
 	}
 	var numPoint int64
 	if err := json.Unmarshal(raw, &numPoint); err == nil {
@@ -66,7 +85,7 @@ func ParsePointParam(param string) (string, uint32, error) {
 		}
 		return ensureTildePrefix(patp), uint32(num), nil
 	}
-	patp, point, err := validateAndNormalizePatp(decoded)
+	patp, point, err := ValidateAndNormalizePatp(decoded)
 	if err != nil {
 		return "", 0, err
 	}
@@ -74,7 +93,7 @@ func ParsePointParam(param string) (string, uint32, error) {
 }
 
 // get a point and an int back
-func validateAndNormalizePatp(patp string) (string, uint32, error) {
+func ValidateAndNormalizePatp(patp string) (string, uint32, error) {
 	cleanPatp := strings.TrimPrefix(patp, "~")
 	point, err := co.Patp2Point("~" + cleanPatp)
 	if err != nil {

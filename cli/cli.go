@@ -179,11 +179,6 @@ var ModBreachCmd = &cobra.Command{
 			}
 			if !found {
 				fmt.Println("Transaction committed to chain")
-				if err := patchBreachComplete(point); err != nil {
-					fmt.Printf("Error marking breach job completed: %v\n", err)
-				} else {
-					fmt.Println("Ship disowned")
-				}
 				return nil
 			}
 			if cmd.Flags().Changed("wait") {

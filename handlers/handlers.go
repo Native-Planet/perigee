@@ -73,7 +73,7 @@ func GetWallet() http.HandlerFunc {
 				return
 			}
 		}
-		zap.L().Info("Generate wallet", zap.String("ship", shipParam), zap.Int("life", revision))
+		zap.L().Info("Generate wallet", zap.String("point", shipParam), zap.Int("life", revision))
 		walletData := keygen.GenerateWallet(ticket, uint32(bigPoint.Int64()), passphrase, uint(revision), true)
 		jsonData, err := json.MarshalIndent(types.WalletResp{Wallet: walletData}, "", "  ")
 		if err != nil {

@@ -8,9 +8,7 @@ You can override the roller URL by setting a `ROLLER_URL` env var
 ### `get-wallet`
 - generate a json wallet with key information
 > server
-```bash
-curl http://localhost:8080/v1/gen/wallet\?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&life\=2
-```
+`curl http://localhost:8080/v1/gen/wallet\?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&life\=2`
 > cli
 ```bash
 perigee generate-wallet --point=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet
@@ -21,9 +19,7 @@ perigee generate-wallet --point=sampel-palnet --master-ticket=sampel-palnet-samp
 ### `get-point` 
 - get the azimuth state of a point
 > server
-```bash
-curl http://localhost:8080/v1/get/point\?point=\~satmun-wacnup
-```
+`curl http://localhost:8080/v1/get/point\?point=\~satmun-wacnup`
 > cli
 ```bash
 perigee get-point --point=sampel-palnet
@@ -33,9 +29,7 @@ perigee get-point --point=sampel-palnet
 ### `get-pending`
 - get all pending rollup txos
 > server
-```bash
-curl http://localhost:8080/v1/get/pending
-```
+`curl http://localhost:8080/v1/get/pending`
 > cli
 ```bash
 perigee get-pending
@@ -45,11 +39,9 @@ perigee get-pending
 ### `breach`
 - continuity breach
 > server
-```bash
-curl -H 'Content-Type: application/json' \
+`curl -H 'Content-Type: application/json' \
     -d '{"point":"~dabdet-linnel","ticket":"~sampel-ticket-sampel-ticket","revision":2}' \
-    http://localhost:8080/v1/mod/breach
-```
+    http://localhost:8080/v1/mod/breach`
 > cli
 ```bash
 perigee breach --point=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet
@@ -60,10 +52,8 @@ note you can also use the `--wait` flag with a length of time (eg `60m`, `2h`) t
 ### `escape`
 - escape to a new sponsor
 > server
-```bash
-curl -H 'Content-Type: application/json' \
-    http://localhost:8080/v1/mod/escape?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&sponsor=sampel
-```
+`curl -H 'Content-Type: application/json' \
+    http://localhost:8080/v1/mod/escape?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&sponsor=sampel`
 > cli
 ```bash
 perigee escape --point=sampel-palnet --sponsor=sampel --master-ticket=sampel-palnet-sampel-palnet
@@ -73,10 +63,8 @@ perigee escape --point=sampel-palnet --sponsor=sampel --master-ticket=sampel-pal
 ### `cancel-escape`
 - cancel an escape request
 > server
-```bash
-curl -H 'Content-Type: application/json' \
-    http://localhost:8080/v1/mod/cancel-escape?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&sponsor=sampel
-```
+`curl -H 'Content-Type: application/json' \
+    http://localhost:8080/v1/mod/cancel-escape?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&sponsor=sampel`
 > cli
 ```bash
 perigee cancel-escape --point=sampel-palnet adoptee=sampel --master-ticket=sampel-palnet-sampel-palnet
@@ -86,10 +74,8 @@ perigee cancel-escape --point=sampel-palnet adoptee=sampel --master-ticket=sampe
 ### `adopt`
 - accept an escape request as a sponsor
 > server
-```bash
-curl -H 'Content-Type: application/json' \
-    http://localhost:8080/v1/mod/escape?ship=\~satmun\&ticket=\~sampel-ticket-sampel-ticket\&adoptee=sampel-palnet
-```
+`curl -H 'Content-Type: application/json' \
+    http://localhost:8080/v1/mod/escape?ship=\~satmun\&ticket=\~sampel-ticket-sampel-ticket\&adoptee=sampel-palnet`
 > cli
 ```bash
 perigee adopt --point=sampel adoptee=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet

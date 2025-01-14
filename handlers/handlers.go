@@ -53,7 +53,7 @@ func GetWallet() http.HandlerFunc {
 		}
 		shipParam := r.URL.Query().Get("point")
 		ticket := r.URL.Query().Get("ticket")
-		revisionParam := r.URL.Query().Get("revision")
+		revisionParam := r.URL.Query().Get("life")
 		passphrase := r.URL.Query().Get("passphrase")
 		if shipParam == "" || ticket == "" {
 			http.Error(w, "Missing 'point' or 'ticket' query parameter", http.StatusBadRequest)
@@ -72,7 +72,7 @@ func GetWallet() http.HandlerFunc {
 				return
 			}
 		}
-		zap.L().Info("Generate wallet", zap.String("ship", shipParam), zap.Int("revision", revision))
+		zap.L().Info("Generate wallet", zap.String("ship", shipParam), zap.Int("life", revision))
 		walletData := keygen.GenerateWallet(ticket, uint32(bigPoint.Int64()), passphrase, uint(revision), true)
 		jsonData, err := json.MarshalIndent(types.WalletResp{Wallet: walletData}, "", "  ")
 		if err != nil {

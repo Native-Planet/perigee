@@ -15,8 +15,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"perigee/logger"
-
 	"go.uber.org/zap"
 
 	"github.com/deelawn/urbit-gob/co"
@@ -25,10 +23,6 @@ import (
 
 const (
 	CryptoSuiteVersion = 1
-)
-
-var (
-	log *zap.Logger
 )
 
 type Point struct {
@@ -59,11 +53,25 @@ type Point struct {
 			Crypt string `json:"crypt"`
 		} `json:"keys"`
 		Sponsor struct {
-			Has bool `json:"has"`
-			Who int  `json:"who"`
+			Has  bool   `json:"has"`
+			Who  int    `json:"who"`
+			Patp string `json:"patp"`
 		} `json:"sponsor"`
 		Rift string `json:"rift"`
 	} `json:"network"`
+}
+
+func (p *Point) ResolveSponsorPatp() error {
+	if !p.Network.Sponsor.Has {
+		return nil
+	}
+	who := big.NewInt(int64(p.Network.Sponsor.Who))
+	patp, err := co.Point2Patp(who)
+	if err != nil {
+		return err
+	}
+	p.Network.Sponsor.Patp = patp
+	return nil
 }
 
 type ValidationError struct {
@@ -131,6 +139,24 @@ type ProxyRequest struct {
 	From    FromData `json:"from"`
 	Data    struct {
 		Address string `json:"address"`
+	} `json:"data"`
+	Signature string `json:"sig,omitempty"`
+}
+
+type EscapeRequest struct {
+	Address string   `json:"address"`
+	From    FromData `json:"from"`
+	Data    struct {
+		Ship string `json:"ship"`
+	} `json:"data"`
+	Signature string `json:"sig,omitempty"`
+}
+
+type AdoptRequest struct {
+	Address string   `json:"address"`
+	From    FromData `json:"from"`
+	Data    struct {
+		Ship string `json:"ship"`
 	} `json:"data"`
 	Signature string `json:"sig,omitempty"`
 }
@@ -220,14 +246,6 @@ type Client struct {
 	ReqCounter atomic.Int64
 }
 
-func init() {
-	if err := logger.Init(); err != nil {
-		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
-	}
-	defer logger.Sync()
-	log = logger.GetLogger()
-}
-
 func (c *Client) Request(method string, params interface{}) (json.RawMessage, error) {
 	req := JsonRPCRequest{
 		Version: "2.0",
@@ -240,7 +258,7 @@ func (c *Client) Request(method string, params interface{}) (json.RawMessage, er
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
-	log.Info("Request", zap.String("body", string(reqBody)))
+	zap.L().Info("Request", zap.String("body", string(reqBody)))
 
 	httpReq, err := http.NewRequest("POST", c.Endpoint, bytes.NewReader(reqBody))
 	if err != nil {
@@ -259,7 +277,7 @@ func (c *Client) Request(method string, params interface{}) (json.RawMessage, er
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 
-	log.Info("Response", zap.String("status", resp.Status), zap.String("body", string(bodyBytes)))
+	zap.L().Info("Response", zap.String("status", resp.Status), zap.String("body", string(bodyBytes)))
 
 	var rpcResp JsonRPCResponse
 	if err := json.Unmarshal(bodyBytes, &rpcResp); err != nil {
@@ -336,7 +354,7 @@ func (c *Client) DoRequest(ctx context.Context, method string, params interface{
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
-	log.Info("Request", zap.String("body", string(reqBody)))
+	zap.L().Info("Request", zap.String("body", string(reqBody)))
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.Endpoint, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -352,7 +370,7 @@ func (c *Client) DoRequest(ctx context.Context, method string, params interface{
 	if err != nil {
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
-	log.Info("Response", zap.String("status", resp.Status), zap.String("body", string(bodyBytes)))
+	zap.L().Info("Response", zap.String("status", resp.Status), zap.String("body", string(bodyBytes)))
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(bodyBytes))
@@ -418,6 +436,114 @@ func (c *Client) ConfigureKeys(ctx context.Context, point, encryptPublic, authPu
 		Signature: params.Signature,
 		Hash:      txHash,
 		Type:      "configureKeys",
+	}, nil
+}
+
+func (c *Client) Escape(ctx context.Context, point, sponsor, signingAddress string, privateKey *ecdsa.PrivateKey) (*Transaction, error) {
+	proxy, err := c.GetManagementProxyType(ctx, point, signingAddress)
+	if err != nil {
+		return nil, err
+	}
+	params := EscapeRequest{
+		Address: signingAddress,
+		From: FromData{
+			Ship:  point,
+			Proxy: proxy,
+		},
+		Data: struct {
+			Ship string `json:"ship"`
+		}{
+			Ship: sponsor,
+		},
+	}
+
+	if err := c.addSignature(ctx, "escape", &params, privateKey); err != nil {
+		return nil, fmt.Errorf("add signature: %w", err)
+	}
+	result, err := c.DoRequest(ctx, "escape", params)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	var txHash string
+	if err := json.Unmarshal(result, &txHash); err != nil {
+		return nil, fmt.Errorf("unmarshal transaction hash: %w", err)
+	}
+	return &Transaction{
+		Signature: params.Signature,
+		Hash:      txHash,
+		Type:      "escape",
+	}, nil
+}
+
+func (c *Client) CancelEscape(ctx context.Context, point, sponsor, signingAddress string, privateKey *ecdsa.PrivateKey) (*Transaction, error) {
+	proxy, err := c.GetManagementProxyType(ctx, point, signingAddress)
+	if err != nil {
+		return nil, err
+	}
+	params := EscapeRequest{
+		Address: signingAddress,
+		From: FromData{
+			Ship:  point,
+			Proxy: proxy,
+		},
+		Data: struct {
+			Ship string `json:"ship"`
+		}{
+			Ship: sponsor,
+		},
+	}
+
+	if err := c.addSignature(ctx, "cancel-escape", &params, privateKey); err != nil {
+		return nil, fmt.Errorf("add signature: %w", err)
+	}
+	result, err := c.DoRequest(ctx, "cancel-escape", params)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	var txHash string
+	if err := json.Unmarshal(result, &txHash); err != nil {
+		return nil, fmt.Errorf("unmarshal transaction hash: %w", err)
+	}
+	return &Transaction{
+		Signature: params.Signature,
+		Hash:      txHash,
+		Type:      "cancel-escape",
+	}, nil
+}
+
+func (c *Client) Adopt(ctx context.Context, point, sponsor, signingAddress string, privateKey *ecdsa.PrivateKey) (*Transaction, error) {
+	proxy, err := c.GetManagementProxyType(ctx, point, signingAddress)
+	if err != nil {
+		return nil, err
+	}
+	params := AdoptRequest{
+		Address: signingAddress,
+		From: FromData{
+			Ship:  point,
+			Proxy: proxy,
+		},
+		Data: struct {
+			Ship string `json:"ship"`
+		}{
+			Ship: sponsor,
+		},
+	}
+
+	if err := c.addSignature(ctx, "adopt", &params, privateKey); err != nil {
+		return nil, fmt.Errorf("add signature: %w", err)
+	}
+	result, err := c.DoRequest(ctx, "adopt", params)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	var txHash string
+	if err := json.Unmarshal(result, &txHash); err != nil {
+		return nil, fmt.Errorf("unmarshal transaction hash: %w", err)
+	}
+	return &Transaction{
+		Signature: params.Signature,
+		Hash:      txHash,
+		Type:      "adopt",
 	}, nil
 }
 
@@ -602,11 +728,15 @@ func (c *Client) TransferPoint(ctx context.Context, point string, reset bool, ne
 }
 
 func (c *Client) SetManagementProxy(ctx context.Context, point, proxyAddress, signingAddress string, privateKey *ecdsa.PrivateKey) (*Transaction, error) {
+	proxy, err := c.GetManagementProxyType(ctx, point, signingAddress)
+	if err != nil {
+		return nil, err
+	}
 	params := ProxyRequest{
 		Address: signingAddress,
 		From: FromData{
 			Ship:  point,
-			Proxy: "own",
+			Proxy: proxy,
 		},
 		Data: struct {
 			Address string `json:"address"`

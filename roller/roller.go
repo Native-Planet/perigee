@@ -15,17 +15,17 @@ import (
 )
 
 var (
-	endpoint string
-	Client   *Roller
+	RollerURL string
+	Client    *Roller
 )
 
 func init() {
 	if os.Getenv("ROLLER_URL") == "" {
-		endpoint = "https://roller.urbit.org/v1/roller"
+		RollerURL = "https://roller.urbit.org/v1/roller"
 	} else {
-		endpoint = os.Getenv("ROLLER_URL")
+		RollerURL = os.Getenv("ROLLER_URL")
 	}
-	conf := Config{Endpoint: endpoint, HTTPClient: http.DefaultClient}
+	conf := Config{Endpoint: RollerURL, HTTPClient: http.DefaultClient}
 	Client = New(conf)
 
 }
@@ -82,6 +82,18 @@ func (r *Roller) TransferPoint(ctx context.Context, point string, reset bool, ne
 
 func (r *Roller) ConfigureKeys(ctx context.Context, point, encryptPublic, authPublic string, breach bool, signingAddress string, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
 	return r.client.ConfigureKeys(ctx, point, encryptPublic, authPublic, breach, signingAddress, privateKey)
+}
+
+func (r *Roller) Escape(ctx context.Context, point, sponsor, signingAddress string, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+	return r.client.Escape(ctx, point, sponsor, signingAddress, privateKey)
+}
+
+func (r *Roller) CancelEscape(ctx context.Context, point, sponsor, signingAddress string, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+	return r.client.CancelEscape(ctx, point, sponsor, signingAddress, privateKey)
+}
+
+func (r *Roller) Adopt(ctx context.Context, point, adoptee, signingAddress string, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+	return r.client.Adopt(ctx, point, adoptee, signingAddress, privateKey)
 }
 
 func (r *Roller) SetManagementProxy(ctx context.Context, point, proxyAddress, signingAddress string, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {

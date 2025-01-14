@@ -1,6 +1,6 @@
 ## `perigee`
 
-An HTTP endpoint turns master tickets into breaches (now with CLI mode!)
+An HTTP server and CLI tool for performing Azimuth PKI operations for Urbit IDs
 
 Set the `ROLLER_URL` env var for custom roller.
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"perigee/roller"
 	"perigee/types"
 	"strconv"
@@ -472,6 +473,75 @@ var GetWalletCmd = &cobra.Command{
 			return fmt.Errorf("Error marshaling response: %v", err)
 		}
 		fmt.Println(string(jsonData))
+		pwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("error getting current directory: %v", err)
+		}
+		p := strings.ReplaceAll(patp, "~", "")
+		filename := filepath.Join(pwd, fmt.Sprintf("%s-%v-wallet.json", p, life))
+		err = os.WriteFile(filename, []byte(string(jsonData)), 0600)
+		if err != nil {
+			return fmt.Errorf("error writing wallet to disk: %v", err)
+		}
+		fmt.Printf("Wallet written to %s\n", filename)
+		return nil
+	},
+}
+
+var GetKeyfileCmd = &cobra.Command{
+	Use:   "get-keyfile",
+	Short: "Generate a keyfile from master ticket",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		point, _ := cmd.Flags().GetString("point")
+		if point == "" {
+			return fmt.Errorf("point is required")
+		}
+		masterTicket, _ := cmd.Flags().GetString("master-ticket")
+		if masterTicket == "" {
+			return fmt.Errorf("master-ticket is required")
+		}
+		patp, pointInt, err := types.ValidateAndNormalizePatp(point)
+		if err != nil {
+			return fmt.Errorf("invalid point")
+		}
+		pInfo, err := roller.Client.GetPoint(ctx, patp)
+		if err != nil {
+			return fmt.Errorf("Error getting point: %v", err)
+		}
+		var rev string
+		var lifeInt int
+		life, _ := cmd.Flags().GetString("life")
+		if life != "" {
+			lifeInt, err = strconv.Atoi(rev)
+			if err != nil {
+				return fmt.Errorf("invalid life value: %v", err)
+			}
+		} else {
+			rev = fmt.Sprintf("%v", pInfo.Network.Keys.Life)
+			lifeInt, err := strconv.Atoi(rev)
+			if err != nil {
+				return fmt.Errorf("invalid life value: %v", err)
+			}
+			lifeInt -= 1
+		}
+		wallet := keygen.GenerateWallet(masterTicket, uint32(pointInt), "", uint(lifeInt), true)
+		pointKey := strings.TrimPrefix(pInfo.Network.Keys.Crypt, "0x")
+		if wallet.Network.Keys.Crypt.Public != pointKey && life != "" {
+			return fmt.Errorf("could not generate public key matching PKI; 0x%s / %s", wallet.Network.Keys.Crypt.Public, pInfo.Network.Keys.Crypt)
+		}
+		keyfile, err := roller.Keyfile(wallet.Network.Keys.Crypt.Private, wallet.Network.Keys.Auth.Private, patp, lifeInt)
+		fmt.Println(keyfile)
+		pwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("error getting current directory: %v", err)
+		}
+		p := strings.ReplaceAll(patp, "~", "")
+		filename := filepath.Join(pwd, fmt.Sprintf("%s-%d.key", p, lifeInt))
+		err = os.WriteFile(filename, []byte(keyfile), 0600)
+		if err != nil {
+			return fmt.Errorf("error writing keyfile to disk: %v", err)
+		}
+		fmt.Printf("Keyfile written to %s\n", filename)
 		return nil
 	},
 }

@@ -41,6 +41,10 @@ func init() {
 	cli.GetWalletCmd.Flags().String("point", "", "Azimuth point for wallet generation")
 	cli.GetWalletCmd.Flags().String("life", "", "Custom life value for wallet generation")
 
+	cli.GetKeyfileCmd.Flags().String("master-ticket", "", "Master ticket for keyfile generation")
+	cli.GetKeyfileCmd.Flags().String("point", "", "Azimuth point for keyfile generation")
+	cli.GetKeyfileCmd.Flags().String("life", "", "Custom life value for keyfile generation (optional)")
+
 	cli.ModBreachCmd.Flags().String("point", "", "Point for breach")
 	cli.ModBreachCmd.Flags().String("master-ticket", "", "Master ticket for wallet generation")
 	cli.ModBreachCmd.Flags().String("passphrase", "", "Passphrase for wallet")
@@ -68,6 +72,7 @@ func init() {
 
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(cli.GetWalletCmd)
+	rootCmd.AddCommand(cli.GetKeyfileCmd)
 	rootCmd.AddCommand(cli.GetPointCmd)
 	rootCmd.AddCommand(cli.GetPendingCmd)
 	rootCmd.AddCommand(cli.ModBreachCmd)

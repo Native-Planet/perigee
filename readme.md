@@ -67,9 +67,7 @@ perigee get-pending
 - continuity breach
 ##### server
 
-`curl -H 'Content-Type: application/json' \
-    -d '{"point":"~dabdet-linnel","ticket":"~sampel-ticket-sampel-ticket","revision":2}' \
-    http://localhost:8080/v1/mod/breach`
+`curl -H 'Content-Type: application/json' -d '{"point":"~dabdet-linnel","ticket":"~sampel-ticket-sampel-ticket","revision":2}' http://localhost:8080/v1/mod/breach`
 
 ##### cli
 ```bash
@@ -85,8 +83,7 @@ note you can also use the `--wait` flag with a length of time (eg `60m`, `2h`) t
 - escape to a new sponsor
 ##### server
 
-`curl -H 'Content-Type: application/json' \
-    http://localhost:8080/v1/mod/escape?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&sponsor=sampel`
+`curl -H 'Content-Type: application/json' http://localhost:8080/v1/mod/escape?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&sponsor=sampel`
 
 ##### cli
 ```bash
@@ -101,8 +98,7 @@ perigee escape --point=sampel-palnet --sponsor=sampel --master-ticket=sampel-pal
 - cancel an escape request
 ##### server
 
-`curl -H 'Content-Type: application/json' \
-    http://localhost:8080/v1/mod/cancel-escape?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&sponsor=sampel`
+`curl -H 'Content-Type: application/json' http://localhost:8080/v1/mod/cancel-escape?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&sponsor=sampel`
 
 ##### cli
 ```bash
@@ -117,8 +113,7 @@ perigee cancel-escape --point=sampel-palnet adoptee=sampel --master-ticket=sampe
 - accept an escape request as a sponsor
 ##### server
 
-`curl -H 'Content-Type: application/json' \
-    http://localhost:8080/v1/mod/escape?ship=\~satmun\&ticket=\~sampel-ticket-sampel-ticket\&adoptee=sampel-palnet`
+`curl -H 'Content-Type: application/json' http://localhost:8080/v1/mod/escape?ship=\~satmun\&ticket=\~sampel-ticket-sampel-ticket\&adoptee=sampel-palnet`
 
 ##### cli
 ```bash

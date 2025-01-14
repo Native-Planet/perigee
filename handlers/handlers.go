@@ -151,6 +151,7 @@ func GetKeyfile() http.HandlerFunc {
 		}
 		patp := r.URL.Query().Get("point")
 		ticket := r.URL.Query().Get("ticket")
+		rev := r.URL.Query().Get("life")
 		point, err := roller.Client.GetPoint(r.Context(), patp)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error retrieving point info: %v", err), http.StatusInternalServerError)
@@ -161,19 +162,29 @@ func GetKeyfile() http.HandlerFunc {
 			http.Error(w, fmt.Sprintf("error converting point: %v", err), http.StatusInternalServerError)
 			return
 		}
-		life, err := strconv.Atoi(point.Network.Keys.Life)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("error casting azimuth life: %v", err), http.StatusInternalServerError)
-			return
+		var life int
+		if rev == "" {
+			revInt, err := strconv.Atoi(point.Network.Keys.Life)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("error casting azimuth life: %v", err), http.StatusInternalServerError)
+				return
+			}
+			life = revInt - 1
+		} else {
+			revInt, err := strconv.Atoi(rev)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("error casting azimuth life: %v", err), http.StatusInternalServerError)
+				return
+			}
+			life = revInt
 		}
-		life -= 1
 		wallet := keygen.GenerateWallet(ticket, uint32(bigPoint.Uint64()), "", uint(life), true)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error generating wallet: %v", err), http.StatusInternalServerError)
 			return
 		}
 		pointKey := strings.TrimPrefix(point.Network.Keys.Crypt, "0x")
-		if wallet.Network.Keys.Crypt.Public != pointKey {
+		if wallet.Network.Keys.Crypt.Public != pointKey && rev == "" {
 			http.Error(w, fmt.Sprintf("could not generate matching keyfile; 0x%s / %s", wallet.Network.Keys.Crypt.Public, point.Network.Keys.Crypt), http.StatusInternalServerError)
 			return
 		}
@@ -201,27 +212,35 @@ func ModBreach() http.HandlerFunc {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		var req types.BreachReq
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, fmt.Sprintf("Error decoding request: %v", err), http.StatusBadRequest)
-			return
-		}
-		patp, p, err := types.UnmarshalPoint(req.Point)
+		shipParam := r.URL.Query().Get("point")
+		ticket := r.URL.Query().Get("ticket")
+		life := r.URL.Query().Get("life")
+		passphrase := r.URL.Query().Get("passphrase")
+		patp, p, err := types.ParsePointParam(shipParam)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Invalid point: %v", err), http.StatusBadRequest)
 			return
 		}
 		pInfo, err := roller.Client.GetPoint(r.Context(), patp)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error getting point: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Invalid point: %v", err), http.StatusBadRequest)
 			return
 		}
-		rev, err := strconv.Atoi(pInfo.Network.Keys.Life)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid life %v", err), http.StatusInternalServerError)
-			return
+		var rev int
+		if life == "" {
+			rev, err = strconv.Atoi(pInfo.Network.Keys.Life)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Invalid life %v", err), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			rev, err = strconv.Atoi(life)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Invalid life %v", err), http.StatusInternalServerError)
+				return
+			}
 		}
-		wallet := keygen.GenerateWallet(req.Ticket, uint32(p), req.Passphrase, uint(rev), true)
+		wallet := keygen.GenerateWallet(ticket, uint32(p), passphrase, uint(rev), true)
 		privKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Invalid key material: %v", err), http.StatusInternalServerError)

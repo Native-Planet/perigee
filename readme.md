@@ -33,11 +33,25 @@ docker run -v $(pwd)/out:/out -p 8080:8080 perigee
 perigee generate-wallet --point=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet
 ```
 
-(providing the `life` is optional)
+(optional flags: `--life`, `--output-dir`; also writes to `./out/sampel-palnet-1-wallet.json` unless output path is overriden)
 
 ---
 
 
+### `get-keyfile`
+- generate a `@uv`-encoded keyfile to boot a ship
+##### server
+
+`curl http://localhost:8080/v1/gen/wallet\?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&life\=2`
+
+##### cli
+```bash
+perigee generate-wallet --point=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet
+```
+
+(optional flags: `--life`, `--output-dir`; also writes to `./out/sampel-palnet-1.key` unless output path is overriden)
+
+---
 
 ### `get-point` 
 - get the azimuth state of a point

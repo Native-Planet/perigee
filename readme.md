@@ -2,8 +2,12 @@
 
 An HTTP endpoint turns master tickets into breaches (now with CLI mode!)
 
-
 You can override the roller URL by setting a `ROLLER_URL` env var
+
+
+---
+
+
 
 ### `get-wallet`
 - generate a json wallet with key information
@@ -17,7 +21,10 @@ perigee generate-wallet --point=sampel-palnet --master-ticket=sampel-palnet-samp
 ```
 
 (providing the `life` is optional)
+
 ---
+
+
 
 ### `get-point` 
 - get the azimuth state of a point
@@ -29,7 +36,10 @@ perigee generate-wallet --point=sampel-palnet --master-ticket=sampel-palnet-samp
 ```bash
 perigee get-point --point=sampel-palnet
 ```
+
 ---
+
+
 
 ### `get-pending`
 - get all pending rollup txos
@@ -41,7 +51,10 @@ perigee get-point --point=sampel-palnet
 ```bash
 perigee get-pending
 ```
+
 ---
+
+
 
 ### `breach`
 - continuity breach
@@ -56,7 +69,10 @@ perigee get-pending
 perigee breach --point=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet
 ```
 note you can also use the `--wait` flag with a length of time (eg `60m`, `2h`) to watch the roller until it clears the queue
+
 ---
+
+
 
 ### `escape`
 - escape to a new sponsor
@@ -69,7 +85,10 @@ note you can also use the `--wait` flag with a length of time (eg `60m`, `2h`) t
 ```bash
 perigee escape --point=sampel-palnet --sponsor=sampel --master-ticket=sampel-palnet-sampel-palnet
 ```
+
 ---
+
+
 
 ### `cancel-escape`
 - cancel an escape request
@@ -82,7 +101,10 @@ perigee escape --point=sampel-palnet --sponsor=sampel --master-ticket=sampel-pal
 ```bash
 perigee cancel-escape --point=sampel-palnet adoptee=sampel --master-ticket=sampel-palnet-sampel-palnet
 ```
+
 ---
+
+
 
 ### `adopt`
 - accept an escape request as a sponsor

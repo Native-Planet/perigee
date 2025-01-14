@@ -19,6 +19,7 @@ import (
 )
 
 var (
+	// use this to set auth headers
 	adminToken = os.Getenv("ADMIN_TOKEN")
 )
 
@@ -37,7 +38,7 @@ func ReadinessProbe(w http.ResponseWriter, r *http.Request) {
 func Auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Admin-Token")
-		if authHeader != adminToken {
+		if authHeader != adminToken && adminToken != "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}

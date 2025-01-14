@@ -19,9 +19,8 @@ import (
 )
 
 var (
-	ctx        = context.Background()
-	apiURL     = os.Getenv("API_URL")
-	adminToken = os.Getenv("ADMIN_TOKEN")
+	ctx    = context.Background()
+	apiURL = os.Getenv("API_URL")
 )
 
 var GetPointCmd = &cobra.Command{

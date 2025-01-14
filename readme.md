@@ -2,6 +2,12 @@
 
 An HTTP server and CLI tool for performing Azimuth PKI operations for Urbit IDs
 
+![image](https://github.com/user-attachments/assets/b09016fd-aaa8-4d9e-a488-99b274f237f1)
+
+This is a tool that you can run as an HTTP server or as a one-off command line tool. It is a wrapper around the [L2 roller RPC](https://urbit.github.io/roller-rpc-client/) server, which can also do convenient stuff like generating valid networking keys using the default procedural method. This allows you to e.g. breach a ship with a single curl, knowing only the `@p` and the master ticket (or eth wallet private key). Additionally, it contains a library for casting to `@uv` in golang, which allows you to generate valid keyfiles to boot your ship -- this removes the dependency on [Bridge](https://bridge.urbit.org) and allows you to automate PKI updates.
+
+For now it can only commit changes for L2 points.
+
 Set the `ROLLER_URL` env var for custom roller. Set the `ADMIN_TOKEN` env var if you want authentication in server mode.
 
 To build: `go build -o perigee`

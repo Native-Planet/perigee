@@ -2,8 +2,9 @@
 
 An HTTP endpoint turns master tickets into breaches (now with CLI mode!)
 
-You can override the roller URL by setting a `ROLLER_URL` env var
+Set the `ROLLER_URL` env var for custom rollers and `API_URL` with the desired solaris endpoint for automatic master ticket retrieval.
 
+> Note that you can use the `privkey` url parameter or `--private-key` cli arg instead of a master ticket and provide an ethereum wallet private key for an ownership or management address
 
 ---
 
@@ -118,9 +119,6 @@ perigee cancel-escape --point=sampel-palnet adoptee=sampel --master-ticket=sampe
 perigee adopt --point=sampel adoptee=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet
 ```
 
-> Note that you can use the `privkey` url parameter or `--private-key` cli arg instead of a master ticket and provide an ethereum wallet private key for an ownership or management address
-
-Set the `ROLLER_URL` env var for custom rollers and `API_URL` with the desired solaris endpoint for automatic master ticket retrieval.
 
 ### Todo
 

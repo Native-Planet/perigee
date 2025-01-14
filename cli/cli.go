@@ -450,6 +450,7 @@ var GetWalletCmd = &cobra.Command{
 		if masterTicket == "" {
 			return fmt.Errorf("master-ticket is required")
 		}
+		output, _ := cmd.Flags().GetString("output-dir")
 		patp, pointInt, err := types.ValidateAndNormalizePatp(point)
 		if err != nil {
 			return fmt.Errorf("invalid point")
@@ -476,12 +477,25 @@ var GetWalletCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("error getting current directory: %v", err)
 		}
-		p := strings.ReplaceAll(patp, "~", "")
-		filename := filepath.Join(pwd, fmt.Sprintf("%s-%v-wallet.json", p, life))
-		err = os.WriteFile(filename, []byte(string(jsonData)), 0600)
-		if err != nil {
-			return fmt.Errorf("error writing wallet to disk: %v", err)
+		var outDir string
+		if output != "" {
+			outDir, err = validatePath(output)
+			if err != nil {
+				return fmt.Errorf("error validating output directory: %v", err)
+			}
+		} else {
+			outDir = filepath.Join(pwd, "out")
+			err = os.MkdirAll(outDir, 0755)
+			if err != nil {
+				return fmt.Errorf("error creating output directory: %v", err)
+			}
 		}
+		p := strings.ReplaceAll(patp, "~", "")
+		filename := filepath.Join(outDir, fmt.Sprintf("%s-wallet-%v.json", p, rev))
+        err = os.WriteFile(filename, []byte(jsonData), 0600)
+        if err != nil {
+			return fmt.Errorf("error writing keyfile to disk: %v", err)
+        }
 		fmt.Printf("Wallet written to %s\n", filename)
 		return nil
 	},
@@ -499,6 +513,7 @@ var GetKeyfileCmd = &cobra.Command{
 		if masterTicket == "" {
 			return fmt.Errorf("master-ticket is required")
 		}
+		output, _ := cmd.Flags().GetString("output-dir")
 		patp, pointInt, err := types.ValidateAndNormalizePatp(point)
 		if err != nil {
 			return fmt.Errorf("invalid point")
@@ -530,17 +545,52 @@ var GetKeyfileCmd = &cobra.Command{
 		}
 		keyfile, err := roller.Keyfile(wallet.Network.Keys.Crypt.Private, wallet.Network.Keys.Auth.Private, patp, lifeInt)
 		fmt.Println(keyfile)
-		pwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("error getting current directory: %v", err)
+		var outDir string
+		if output != "" {
+			outDir, err = validatePath(output)
+			if err != nil {
+				return fmt.Errorf("error validating output directory: %v", err)
+			}
+		} else {
+			pwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("error getting current directory: %v", err)
+			}
+			outDir = filepath.Join(pwd, "out")
+			err = os.MkdirAll(outDir, 0755)
+			if err != nil {
+				return fmt.Errorf("error creating output directory: %v", err)
+			}
 		}
 		p := strings.ReplaceAll(patp, "~", "")
-		filename := filepath.Join(pwd, fmt.Sprintf("%s-%d.key", p, lifeInt))
-		err = os.WriteFile(filename, []byte(keyfile), 0600)
-		if err != nil {
+        filename := filepath.Join(outDir, fmt.Sprintf("%s-%d.key", p, lifeInt))
+        err = os.WriteFile(filename, []byte(keyfile), 0600)
+        if err != nil {
 			return fmt.Errorf("error writing keyfile to disk: %v", err)
-		}
+        }
 		fmt.Printf("Keyfile written to %s\n", filename)
 		return nil
 	},
+}
+
+func validatePath(pathStr string) (string, error) {
+    cleanPath := filepath.Clean(pathStr)
+    absPath, err := filepath.Abs(cleanPath)
+    if err != nil {
+        return "", fmt.Errorf("invalid path: %v", err)
+    }
+    if !filepath.IsAbs(absPath) {
+        return "", fmt.Errorf("path must be absolute")
+    }
+    info, err := os.Stat(absPath)
+    if err != nil {
+        if os.IsNotExist(err) {
+            return "", fmt.Errorf("path does not exist")
+        }
+        return "", fmt.Errorf("error checking path: %v", err)
+    }
+    if !info.IsDir() {
+        return "", fmt.Errorf("path must be a directory")
+    }
+    return filepath.Base(absPath), nil
 }

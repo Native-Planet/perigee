@@ -10,7 +10,7 @@ To run docker container:
 
 ```bash
 docker build -t perigee
-docker run -v $(pwd)/out:/output -p 8080:8080 perigee
+docker run -v $(pwd)/out:/out -p 8080:8080 perigee
 ```
 
 > Note that you can use the `privkey` url parameter or `--private-key` cli arg instead of a master ticket and provide an ethereum wallet private key for an ownership or management address

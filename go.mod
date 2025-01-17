@@ -7,7 +7,7 @@ require (
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/deelawn/urbit-gob v1.0.0
 	github.com/ethereum/go-ethereum v1.14.11
-	github.com/nathanlever/keygen v0.0.0-unpublished
+	github.com/nathanlever/keygen v0.1.1-0.20210804120817-7b7dba5c1281
 	github.com/pkova/argon2 v0.3.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stevelacy/go-urbit v0.0.0-20221028001655-e606f41f727c
@@ -32,5 +32,3 @@ require (
 	golang.org/x/sys v0.27.0 // indirect
 	lukechampine.com/urbit v0.0.0-20210712225959-c6a3fdd2307f // indirect
 )
-
-replace github.com/nathanlever/keygen => github.com/nathanlever/keygen v0.1.1-0.20210804120817-7b7dba5c1281

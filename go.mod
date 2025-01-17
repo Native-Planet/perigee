@@ -9,6 +9,7 @@ require (
 	github.com/ethereum/go-ethereum v1.14.11
 	github.com/nathanlever/keygen v0.0.0-unpublished
 	github.com/pkova/argon2 v0.3.0
+	github.com/spf13/cobra v1.8.1
 	github.com/stevelacy/go-urbit v0.0.0-20221028001655-e606f41f727c
 	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/zap v1.27.0
@@ -23,7 +24,6 @@ require (
 	github.com/holiman/uint256 v1.3.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/twmb/murmur3 v1.1.5 // indirect
 	github.com/tyler-smith/go-bip32 v1.0.0 // indirect

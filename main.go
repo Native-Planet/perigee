@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"os"
 
-	"perigee/cli"
-	"perigee/handlers"
-	"perigee/logger"
-	"perigee/roller"
+	"github.com/Native-Planet/perigee/cli"
+	"github.com/Native-Planet/perigee/handlers"
+	"github.com/Native-Planet/perigee/logger"
+	"github.com/Native-Planet/perigee/roller"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"

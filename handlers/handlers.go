@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"perigee/roller"
-	"perigee/types"
+	"github.com/Native-Planet/perigee/roller"
+	"github.com/Native-Planet/perigee/types"
 
 	"github.com/deelawn/urbit-gob/co"
 	"github.com/ethereum/go-ethereum/crypto"

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"perigee/types"
+	"github.com/Native-Planet/perigee/types"
 
 	"github.com/deelawn/urbit-gob/co"
 	"github.com/pkova/argon2"

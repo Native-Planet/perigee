@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"perigee/roller"
-	"perigee/types"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Native-Planet/perigee/roller"
+	"github.com/Native-Planet/perigee/types"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/nathanlever/keygen"
@@ -492,10 +493,10 @@ var GetWalletCmd = &cobra.Command{
 		}
 		p := strings.ReplaceAll(patp, "~", "")
 		filename := filepath.Join(outDir, fmt.Sprintf("%s-wallet-%v.json", p, rev))
-        err = os.WriteFile(filename, []byte(jsonData), 0600)
-        if err != nil {
+		err = os.WriteFile(filename, []byte(jsonData), 0600)
+		if err != nil {
 			return fmt.Errorf("error writing keyfile to disk: %v", err)
-        }
+		}
 		fmt.Printf("Wallet written to %s\n", filename)
 		return nil
 	},
@@ -563,34 +564,34 @@ var GetKeyfileCmd = &cobra.Command{
 			}
 		}
 		p := strings.ReplaceAll(patp, "~", "")
-        filename := filepath.Join(outDir, fmt.Sprintf("%s-%d.key", p, lifeInt))
-        err = os.WriteFile(filename, []byte(keyfile), 0600)
-        if err != nil {
+		filename := filepath.Join(outDir, fmt.Sprintf("%s-%d.key", p, lifeInt))
+		err = os.WriteFile(filename, []byte(keyfile), 0600)
+		if err != nil {
 			return fmt.Errorf("error writing keyfile to disk: %v", err)
-        }
+		}
 		fmt.Printf("Keyfile written to %s\n", filename)
 		return nil
 	},
 }
 
 func validatePath(pathStr string) (string, error) {
-    cleanPath := filepath.Clean(pathStr)
-    absPath, err := filepath.Abs(cleanPath)
-    if err != nil {
-        return "", fmt.Errorf("invalid path: %v", err)
-    }
-    if !filepath.IsAbs(absPath) {
-        return "", fmt.Errorf("path must be absolute")
-    }
-    info, err := os.Stat(absPath)
-    if err != nil {
-        if os.IsNotExist(err) {
-            return "", fmt.Errorf("path does not exist")
-        }
-        return "", fmt.Errorf("error checking path: %v", err)
-    }
-    if !info.IsDir() {
-        return "", fmt.Errorf("path must be a directory")
-    }
-    return filepath.Base(absPath), nil
+	cleanPath := filepath.Clean(pathStr)
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return "", fmt.Errorf("invalid path: %v", err)
+	}
+	if !filepath.IsAbs(absPath) {
+		return "", fmt.Errorf("path must be absolute")
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("path does not exist")
+		}
+		return "", fmt.Errorf("error checking path: %v", err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("path must be a directory")
+	}
+	return filepath.Base(absPath), nil
 }

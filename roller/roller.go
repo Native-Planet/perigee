@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"os"
 
-	"perigee/aura"
-	"perigee/types"
+	"github.com/Native-Planet/perigee/aura"
+	"github.com/Native-Planet/perigee/types"
 
 	"github.com/stevelacy/go-urbit/noun"
 )

@@ -1,4 +1,4 @@
-module perigee
+module github.com/Native-Planet/perigee
 
 go 1.23.2
 

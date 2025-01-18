@@ -533,11 +533,10 @@ var GetKeyfileCmd = &cobra.Command{
 			}
 		} else {
 			rev = fmt.Sprintf("%v", pInfo.Network.Keys.Life)
-			lifeInt, err := strconv.Atoi(rev)
+			lifeInt, err = strconv.Atoi(rev)
 			if err != nil {
 				return fmt.Errorf("invalid life value: %v", err)
 			}
-			lifeInt -= 1
 		}
 		wallet := keygen.GenerateWallet(masterTicket, uint32(pointInt), "", uint(lifeInt), true)
 		pointKey := strings.TrimPrefix(pInfo.Network.Keys.Crypt, "0x")

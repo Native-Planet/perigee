@@ -33,7 +33,6 @@ func GetContext() context.Context {
 /*
 Note: for passphrases and life values, just set default values if
 you don't have a specific reason to use them
-Just use adjustLife if you're generating keyfiles or breaching
 */
 
 func Escape(point, masterTicket, passphrase, sponsor string) (types.Transaction, error) {

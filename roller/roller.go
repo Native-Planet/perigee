@@ -147,7 +147,6 @@ func ValidatePrivateKey(privateKey *ecdsa.PrivateKey) error {
 }
 
 func keyNoun(point *big.Int, revision int, bnsec *big.Int) noun.Cell {
-	revision -= 1
 	return noun.MakeNoun([]interface{}{
 		[]interface{}{1, 0},            // [1 0]
 		point,                          // point/ship number

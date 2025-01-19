@@ -2,49 +2,235 @@ package libprg
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Native-Planet/perigee/roller"
 	"github.com/Native-Planet/perigee/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/nathanlever/keygen"
 )
 
+const Version = "0.1.0"
+
 var (
-	ctx = context.Background()
+	ErrInvalidPoint    = errors.New("invalid point")
+	ErrInvalidLife     = errors.New("invalid life value")
+	ErrKeyMismatch     = errors.New("public key mismatch with PKI")
+	ErrKeyMaterial     = errors.New("invalid key material")
+	ErrRollerOperation = errors.New("roller operation failed")
+	ctx                = context.Background()
 )
 
-func GetKeyfile(point, masterTicket, life string) (string, error) {
-	patp, pointInt, err := types.ValidateAndNormalizePatp(point)
+func GetContext() context.Context {
+	return ctx
+}
+
+/*
+Note: for passphrases and life values, just set default values if
+you don't have a specific reason to use them
+Just use adjustLife if you're generating keyfiles or breaching
+*/
+
+func Escape(point, masterTicket, passphrase, sponsor string) (types.Transaction, error) {
+	return handleTransaction(point, masterTicket, passphrase, sponsor, roller.Client.Escape)
+}
+
+func CancelEscape(point, masterTicket, passphrase, sponsor string) (types.Transaction, error) {
+	return handleTransaction(point, masterTicket, passphrase, sponsor, roller.Client.CancelEscape)
+}
+
+func Adopt(point, masterTicket, passphrase, adoptee string) (types.Transaction, error) {
+	return handleTransaction(point, masterTicket, passphrase, adoptee, roller.Client.Adopt)
+}
+
+func Breach(point, ticket, passphrase string, life int) (types.Transaction, error) {
+	wallet, _, patp, err := getWalletAndPoint(point, ticket, passphrase, life, false)
 	if err != nil {
-		return "", fmt.Errorf("invalid point")
+		return types.Transaction{}, err
+	}
+	privKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
+	if err != nil {
+		return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
+	}
+	keysTx, err := roller.Client.ConfigureKeys(ctx, patp,
+		"0x"+wallet.Network.Keys.Crypt.Public,
+		"0x"+wallet.Network.Keys.Auth.Public,
+		true, wallet.Ownership.Keys.Address, privKey)
+	if err != nil {
+		return types.Transaction{}, fmt.Errorf("%w: %v", ErrRollerOperation, err)
+	}
+	return *keysTx, nil
+}
+
+func Pending(addr string) ([]types.PendingTx, error) {
+	if addr == "" {
+		return roller.Client.GetAllPending(ctx)
+	}
+	if !strings.HasPrefix(addr, "0x") {
+		_, pInfo, err := validatePointAndGetInfo(addr)
+		if err != nil {
+			return nil, err
+		}
+		addr = pInfo.Ownership.Owner.Address
+	}
+	return roller.Client.GetPendingByAddress(ctx, addr)
+}
+
+func Point(point string) (types.PointResp, error) {
+	patp, pInfo, err := validatePointAndGetInfo(point)
+	if err != nil {
+		return types.PointResp{}, err
+	}
+	resp := types.PointResp{
+		Point:    pInfo,
+		PatpName: patp,
+	}
+	if err := resp.Point.ResolveSponsorPatp(); err != nil {
+		return types.PointResp{}, fmt.Errorf("invalid sponsor point: %v", err)
+	}
+	return resp, nil
+}
+
+func Wallet(point, masterTicket, passphrase string, life int) (keygen.Wallet, error) {
+	wallet, _, _, err := getWalletAndPoint(point, masterTicket, passphrase, life, false)
+	if err != nil {
+		return keygen.Wallet{}, err
+	}
+	return wallet, nil
+}
+
+func Keyfile(point, masterTicket, passphrase string, life int) (string, error) {
+	wallet, pInfo, patp, err := getWalletAndPoint(point, masterTicket, passphrase, life, true)
+	if err != nil {
+		return "", err
+	}
+	rev, err := strconv.Atoi(pInfo.Network.Keys.Life)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrInvalidLife, err)
+	}
+	keyfile, err := roller.Keyfile(
+		wallet.Network.Keys.Crypt.Private,
+		wallet.Network.Keys.Auth.Private,
+		patp,
+		rev,
+	)
+	if err != nil {
+		return "", fmt.Errorf("generating keyfile: %v", err)
+	}
+	return keyfile, nil
+}
+
+func Wait(duration time.Duration, keysTx string) error {
+	if duration == 0 {
+		return nil
+	}
+	batchInfo, err := roller.Client.WhenNextBatch(ctx)
+	if err != nil {
+		return fmt.Errorf("getting batch info: %v", err)
+	}
+	if batchInfo == nil {
+		return fmt.Errorf("no batch info")
+	}
+	waitTime := time.Duration(batchInfo.TimeUntilNext) * time.Second
+	if waitTime > duration {
+		waitTime = duration
+	}
+	deadline := time.Now().Add(duration)
+	ticker := time.NewTicker(waitTime)
+	defer ticker.Stop()
+
+	for {
+		pending, err := Pending("")
+		if err != nil {
+			return fmt.Errorf("error getting pending ships: %v", err)
+		}
+		found := false
+		for _, tx := range pending {
+			if tx.RawTx.Sig == keysTx {
+				found = true
+				break
+			}
+		}
+		if !found {
+			fmt.Println("Transaction committed to chain")
+			return nil
+		}
+		select {
+		case <-ticker.C:
+		case <-time.After(time.Until(deadline)):
+			return fmt.Errorf("timeout waiting for transaction after %v", duration)
+		}
+	}
+}
+
+func validatePointAndGetInfo(point string) (string, *types.Point, error) {
+	patp, _, err := types.ValidateAndNormalizePatp(point)
+	if err != nil {
+		return "", nil, fmt.Errorf("%w: %v", ErrInvalidPoint, err)
 	}
 	pInfo, err := roller.Client.GetPoint(ctx, patp)
 	if err != nil {
-		return "", fmt.Errorf("error getting point: %v", err)
+		return "", nil, fmt.Errorf("getting point info: %v", err)
 	}
-	var rev string
-	if life != "" {
-		rev = life
-	} else {
-		rev = fmt.Sprintf("%v", pInfo.Network.Keys.Life)
-	}
-	var lifeInt int
-	lifeInt, err = strconv.Atoi(rev)
+	return patp, pInfo, nil
+}
+
+// generic transaction handler
+func handleTransaction(point, masterTicket, passphrase, target string,
+	operation func(context.Context, string, string, string, *ecdsa.PrivateKey) (*types.Transaction, error)) (types.Transaction, error) {
+	masterTicket = strings.TrimPrefix(masterTicket, "~")
+	wallet, _, patp, err := getWalletAndPoint(point, masterTicket, passphrase, 0, true) // true for life adjustment
 	if err != nil {
-		return "", fmt.Errorf("invalid life value: %v", err)
+		return types.Transaction{}, err
 	}
-	lifeInt -= 1
-	wallet := keygen.GenerateWallet(masterTicket, uint32(pointInt), "", uint(lifeInt), true)
+	privKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
+	if err != nil {
+		return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
+	}
+	tx, err := operation(ctx, patp, target, wallet.Ownership.Keys.Address, privKey)
+	if err != nil {
+		return types.Transaction{}, fmt.Errorf("%w: %v", ErrRollerOperation, err)
+	}
+	return *tx, nil
+}
+
+// wallet generation
+// a note about adjustLife: keyfiles are generated using the private keys
+// of the *previous* life value, so we need to generate the previous life's
+// keys and then generate the keyfile noun using the current life value
+func getWalletAndPoint(point, masterTicket, passphrase string, life int, adjustLife bool) (keygen.Wallet, *types.Point, string, error) {
+	masterTicket = strings.TrimPrefix(masterTicket, "~")
+	patp, pointInt, err := types.ValidateAndNormalizePatp(point)
+	if err != nil {
+		return keygen.Wallet{}, nil, "", fmt.Errorf("%w: %v", ErrInvalidPoint, err)
+	}
+	pInfo, err := roller.Client.GetPoint(ctx, patp)
+	if err != nil {
+		return keygen.Wallet{}, nil, "", fmt.Errorf("getting point info: %v", err)
+	}
+	var rev int
+	if life == 0 {
+		rev, err = strconv.Atoi(pInfo.Network.Keys.Life)
+		if err != nil {
+			return keygen.Wallet{}, nil, "", fmt.Errorf("%w: %v", ErrInvalidLife, err)
+		}
+	} else {
+		rev = life
+	}
+	walletLife := rev
+	if adjustLife {
+		walletLife -= 1
+	}
+	wallet := keygen.GenerateWallet(masterTicket, uint32(pointInt), passphrase, uint(walletLife), true)
 	pointKey := strings.TrimPrefix(pInfo.Network.Keys.Crypt, "0x")
 	if wallet.Network.Keys.Crypt.Public != pointKey {
-		return "", fmt.Errorf("could not generate public key matching PKI; 0x%s / %s", wallet.Network.Keys.Crypt.Public, pInfo.Network.Keys.Crypt)
+		return keygen.Wallet{}, nil, "", fmt.Errorf("%w: expected 0x%s, got %s",
+			ErrKeyMismatch, wallet.Network.Keys.Crypt.Public, pInfo.Network.Keys.Crypt)
 	}
-	lifeInt += 1
-	keyfile, err := roller.Keyfile(wallet.Network.Keys.Crypt.Private, wallet.Network.Keys.Auth.Private, patp, lifeInt)
-	if err != nil {
-		return "", fmt.Errorf("error generating keyfile: %v", err)
-	}
-	return keyfile, nil
+	return wallet, pInfo, patp, nil
 }

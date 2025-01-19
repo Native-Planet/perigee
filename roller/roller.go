@@ -156,6 +156,13 @@ func keyNoun(point *big.Int, revision int, bnsec *big.Int) noun.Cell {
 }
 
 // generate a @uw keyfile
+//   - the crypt and auth private keys are generated using
+//     the *previous* life value of the point
+//   - crypt and auth keys represented as hex strings are
+//     concatenated with a 42 at the end
+//   - the resulting hex value is cast as a bigint
+//   - we compose the noun (see func keyNoun) and then jam
+//   - @uw encode the jammed noun
 func Keyfile(crypt, auth string, ship interface{}, revision int) (string, error) {
 	point, err := ValidatePoint(ship, false)
 	if err != nil {

@@ -463,21 +463,20 @@ var GetWalletCmd = &cobra.Command{
 		} else {
 			pInfo, err := roller.Client.GetPoint(ctx, patp)
 			if err != nil {
-				return fmt.Errorf("Error getting point: %v", err)
+				return fmt.Errorf("error getting point: %v", err)
 			}
 			revision = fmt.Sprintf("%v", pInfo.Network.Keys.Life)
 		}
 		rev, err := strconv.Atoi(revision)
+		if err != nil {
+			return fmt.Errorf("invalid life value: %v", err)
+		}
 		walletData := keygen.GenerateWallet(masterTicket, uint32(pointInt), "", uint(rev), true)
 		jsonData, err := json.MarshalIndent(types.WalletResp{Wallet: walletData}, "", "  ")
 		if err != nil {
-			return fmt.Errorf("Error marshaling response: %v", err)
+			return fmt.Errorf("error marshaling response: %v", err)
 		}
 		fmt.Println(string(jsonData))
-		pwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("error getting current directory: %v", err)
-		}
 		var outDir string
 		if output != "" {
 			outDir, err = validatePath(output)
@@ -485,6 +484,10 @@ var GetWalletCmd = &cobra.Command{
 				return fmt.Errorf("error validating output directory: %v", err)
 			}
 		} else {
+			pwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("error getting current directory: %v", err)
+			}
 			outDir = filepath.Join(pwd, "out")
 			err = os.MkdirAll(outDir, 0755)
 			if err != nil {

@@ -48,7 +48,7 @@ func Adopt(point, masterTicket, passphrase, adoptee string) (types.Transaction, 
 }
 
 func Breach(point, ticket, passphrase string, life int) (types.Transaction, error) {
-	wallet, _, patp, err := getWalletAndPoint(point, ticket, passphrase, life, true)
+	wallet, _, patp, err := getWalletAndPoint(point, ticket, passphrase, life, false)
 	if err != nil {
 		return types.Transaction{}, err
 	}

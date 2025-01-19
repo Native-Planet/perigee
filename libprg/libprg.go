@@ -1,4 +1,4 @@
-package librpg
+package libprg
 
 import (
 	"context"

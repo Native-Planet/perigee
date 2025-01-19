@@ -4,9 +4,13 @@ An HTTP server and CLI tool for performing Azimuth PKI operations for Urbit IDs
 
 ![image](https://github.com/user-attachments/assets/4c252a1c-72d5-497d-aca3-8dd3dd958a47)
 
-This is a pure Go utility that you can run as an HTTP server or as a one-off command line tool. It is a wrapper around the [L2 roller RPC](https://urbit.github.io/roller-rpc-client/) client spec, but can also do convenient stuff like generating valid networking keys using the default procedural method. This allows you to e.g. breach a ship with a single curl, knowing only the `@p` and the master ticket (or eth wallet private key). Additionally, it contains a library for casting to `@uw` in golang, which allows you to generate valid keyfiles to boot your ship -- this removes the dependency on [Bridge](https://bridge.urbit.org) and allows you to automate PKI updates.
+This is a pure Go utility that you can run as an HTTP server or command line tool. It is a wrapper around the [L2 roller RPC](https://urbit.github.io/roller-rpc-client/) client spec, but it also has macros and conveniences for deriving the data required for transactions. This allows you to e.g. breach a ship with a single command, knowing only the `@p` and the master ticket (or eth wallet private key). 
 
-For now it can only commit changes for L2 points.
+Additionally, it contains a library (`github.com/Native-Planet/perigee/libprg`) with a simple interface that can be imported by other projects, and a library (`github.com/Native-Planet/perigee/aura`) for casting to `@uw` in golang, which allows you to generate valid keyfiles to boot your ship -- this removes the dependency on [Bridge](https://bridge.urbit.org) and allows you to automate PKI updates.
+
+Big thanks to [stephenlacy](https://github.com/stephenlacy/go-urbit) for doing the hard part.
+
+For now this library can only perform L2 transactions.
 
 Set the `ROLLER_URL` env var for custom roller. Set the `ADMIN_TOKEN` env var if you want authentication in server mode.
 

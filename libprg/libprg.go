@@ -35,58 +35,6 @@ you don't have a specific reason to use them
 Just use adjustLife if you're generating keyfiles or breaching
 */
 
-// generic transaction handler
-func handleTransaction(point, masterTicket, passphrase, target string,
-	operation func(context.Context, string, string, string, *ecdsa.PrivateKey) (*types.Transaction, error)) (types.Transaction, error) {
-	masterTicket = strings.TrimPrefix(masterTicket, "~")
-	wallet, _, patp, err := getWalletAndPoint(point, masterTicket, passphrase, 0, true) // true for life adjustment
-	if err != nil {
-		return types.Transaction{}, err
-	}
-	privKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
-	if err != nil {
-		return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
-	}
-	tx, err := operation(ctx, patp, target, wallet.Ownership.Keys.Address, privKey)
-	if err != nil {
-		return types.Transaction{}, fmt.Errorf("%w: %v", ErrRollerOperation, err)
-	}
-	return *tx, nil
-}
-
-// wallet generation (used downstream or directly)
-func getWalletAndPoint(point, masterTicket, passphrase string, life int, adjustLife bool) (keygen.Wallet, *types.Point, string, error) {
-	masterTicket = strings.TrimPrefix(masterTicket, "~")
-	patp, pointInt, err := types.ValidateAndNormalizePatp(point)
-	if err != nil {
-		return keygen.Wallet{}, nil, "", fmt.Errorf("%w: %v", ErrInvalidPoint, err)
-	}
-	pInfo, err := roller.Client.GetPoint(ctx, patp)
-	if err != nil {
-		return keygen.Wallet{}, nil, "", fmt.Errorf("getting point info: %v", err)
-	}
-	var rev int
-	if life == 0 {
-		rev, err = strconv.Atoi(pInfo.Network.Keys.Life)
-		if err != nil {
-			return keygen.Wallet{}, nil, "", fmt.Errorf("%w: %v", ErrInvalidLife, err)
-		}
-	} else {
-		rev = life
-	}
-	walletLife := rev
-	if adjustLife {
-		walletLife -= 1
-	}
-	wallet := keygen.GenerateWallet(masterTicket, uint32(pointInt), passphrase, uint(walletLife), true)
-	pointKey := strings.TrimPrefix(pInfo.Network.Keys.Crypt, "0x")
-	if wallet.Network.Keys.Crypt.Public != pointKey {
-		return keygen.Wallet{}, nil, "", fmt.Errorf("%w: expected 0x%s, got %s",
-			ErrKeyMismatch, wallet.Network.Keys.Crypt.Public, pInfo.Network.Keys.Crypt)
-	}
-	return wallet, pInfo, patp, nil
-}
-
 func Escape(point, masterTicket, passphrase, sponsor string) (types.Transaction, error) {
 	return handleTransaction(point, masterTicket, passphrase, sponsor, roller.Client.Escape)
 }
@@ -182,4 +130,56 @@ func validatePointAndGetInfo(point string) (string, *types.Point, error) {
 		return "", nil, fmt.Errorf("getting point info: %v", err)
 	}
 	return patp, pInfo, nil
+}
+
+// generic transaction handler
+func handleTransaction(point, masterTicket, passphrase, target string,
+	operation func(context.Context, string, string, string, *ecdsa.PrivateKey) (*types.Transaction, error)) (types.Transaction, error) {
+	masterTicket = strings.TrimPrefix(masterTicket, "~")
+	wallet, _, patp, err := getWalletAndPoint(point, masterTicket, passphrase, 0, true) // true for life adjustment
+	if err != nil {
+		return types.Transaction{}, err
+	}
+	privKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
+	if err != nil {
+		return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
+	}
+	tx, err := operation(ctx, patp, target, wallet.Ownership.Keys.Address, privKey)
+	if err != nil {
+		return types.Transaction{}, fmt.Errorf("%w: %v", ErrRollerOperation, err)
+	}
+	return *tx, nil
+}
+
+// wallet generation (used downstream or directly)
+func getWalletAndPoint(point, masterTicket, passphrase string, life int, adjustLife bool) (keygen.Wallet, *types.Point, string, error) {
+	masterTicket = strings.TrimPrefix(masterTicket, "~")
+	patp, pointInt, err := types.ValidateAndNormalizePatp(point)
+	if err != nil {
+		return keygen.Wallet{}, nil, "", fmt.Errorf("%w: %v", ErrInvalidPoint, err)
+	}
+	pInfo, err := roller.Client.GetPoint(ctx, patp)
+	if err != nil {
+		return keygen.Wallet{}, nil, "", fmt.Errorf("getting point info: %v", err)
+	}
+	var rev int
+	if life == 0 {
+		rev, err = strconv.Atoi(pInfo.Network.Keys.Life)
+		if err != nil {
+			return keygen.Wallet{}, nil, "", fmt.Errorf("%w: %v", ErrInvalidLife, err)
+		}
+	} else {
+		rev = life
+	}
+	walletLife := rev
+	if adjustLife {
+		walletLife -= 1
+	}
+	wallet := keygen.GenerateWallet(masterTicket, uint32(pointInt), passphrase, uint(walletLife), true)
+	pointKey := strings.TrimPrefix(pInfo.Network.Keys.Crypt, "0x")
+	if wallet.Network.Keys.Crypt.Public != pointKey {
+		return keygen.Wallet{}, nil, "", fmt.Errorf("%w: expected 0x%s, got %s",
+			ErrKeyMismatch, wallet.Network.Keys.Crypt.Public, pInfo.Network.Keys.Crypt)
+	}
+	return wallet, pInfo, patp, nil
 }

@@ -156,7 +156,7 @@ func Keyfile(point, masterTicket, passphrase, life string) (string, error) {
 			return "", fmt.Errorf("%w: %v", ErrInvalidLife, err)
 		}
 	}
-	wallet, _, patp, err := getWalletAndPoint(point, masterTicket, passphrase, lifeInt, false)
+	wallet, _, patp, err := getWalletAndPoint(point, masterTicket, passphrase, lifeInt, true)
 	if err != nil {
 		return "", err
 	}

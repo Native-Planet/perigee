@@ -258,7 +258,7 @@ func (c *Client) Request(method string, params interface{}) (json.RawMessage, er
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
-	zap.L().Info("Request", zap.String("body", string(reqBody)))
+	zap.L().Debug("Request", zap.String("body", string(reqBody)))
 
 	httpReq, err := http.NewRequest("POST", c.Endpoint, bytes.NewReader(reqBody))
 	if err != nil {
@@ -277,7 +277,7 @@ func (c *Client) Request(method string, params interface{}) (json.RawMessage, er
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 
-	zap.L().Info("Response", zap.String("status", resp.Status), zap.String("body", string(bodyBytes)))
+	zap.L().Debug("Response", zap.String("status", resp.Status), zap.String("body", string(bodyBytes)))
 
 	var rpcResp JsonRPCResponse
 	if err := json.Unmarshal(bodyBytes, &rpcResp); err != nil {
@@ -354,7 +354,7 @@ func (c *Client) DoRequest(ctx context.Context, method string, params interface{
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
-	zap.L().Info("Request", zap.String("body", string(reqBody)))
+	zap.L().Debug("Request", zap.String("body", string(reqBody)))
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.Endpoint, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -370,7 +370,7 @@ func (c *Client) DoRequest(ctx context.Context, method string, params interface{
 	if err != nil {
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
-	zap.L().Info("Response", zap.String("status", resp.Status), zap.String("body", string(bodyBytes)))
+	zap.L().Debug("Response", zap.String("status", resp.Status), zap.String("body", string(bodyBytes)))
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(bodyBytes))

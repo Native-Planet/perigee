@@ -1,4 +1,4 @@
-package librpg
+package libprg
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Native-Planet/perigee/roller"
 	"github.com/Native-Planet/perigee/types"
@@ -66,7 +67,7 @@ func Breach(point, ticket, passphrase string, life int) (types.Transaction, erro
 	return *keysTx, nil
 }
 
-func RollerPending(addr string) ([]types.PendingTx, error) {
+func Pending(addr string) ([]types.PendingTx, error) {
 	if addr == "" {
 		return roller.Client.GetAllPending(ctx)
 	}
@@ -95,29 +96,76 @@ func Point(point string) (types.PointResp, error) {
 	return resp, nil
 }
 
-func Keyfile(point, masterTicket, passphrase, life string) (string, error) {
-	lifeInt := 0
-	if life != "" {
-		var err error
-		lifeInt, err = strconv.Atoi(life)
-		if err != nil {
-			return "", fmt.Errorf("%w: %v", ErrInvalidLife, err)
-		}
+func Wallet(point, masterTicket, passphrase string, life int) (keygen.Wallet, error) {
+	wallet, _, _, err := getWalletAndPoint(point, masterTicket, passphrase, life, false)
+	if err != nil {
+		return keygen.Wallet{}, err
 	}
-	wallet, _, patp, err := getWalletAndPoint(point, masterTicket, passphrase, lifeInt, true)
+	return wallet, nil
+}
+
+func Keyfile(point, masterTicket, passphrase string, life int) (string, error) {
+	wallet, pInfo, patp, err := getWalletAndPoint(point, masterTicket, passphrase, life, true)
 	if err != nil {
 		return "", err
+	}
+	rev, err := strconv.Atoi(pInfo.Network.Keys.Life)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrInvalidLife, err)
 	}
 	keyfile, err := roller.Keyfile(
 		wallet.Network.Keys.Crypt.Private,
 		wallet.Network.Keys.Auth.Private,
 		patp,
-		lifeInt,
+		rev,
 	)
 	if err != nil {
 		return "", fmt.Errorf("generating keyfile: %v", err)
 	}
 	return keyfile, nil
+}
+
+func Wait(duration time.Duration, keysTx string) error {
+	if duration == 0 {
+		return nil
+	}
+	batchInfo, err := roller.Client.WhenNextBatch(ctx)
+	if err != nil {
+		return fmt.Errorf("getting batch info: %v", err)
+	}
+	if batchInfo == nil {
+		return fmt.Errorf("no batch info")
+	}
+	waitTime := time.Duration(batchInfo.TimeUntilNext) * time.Second
+	if waitTime > duration {
+		waitTime = duration
+	}
+	deadline := time.Now().Add(duration)
+	ticker := time.NewTicker(waitTime)
+	defer ticker.Stop()
+
+	for {
+		pending, err := Pending("")
+		if err != nil {
+			return fmt.Errorf("error getting pending ships: %v", err)
+		}
+		found := false
+		for _, tx := range pending {
+			if tx.RawTx.Sig == keysTx {
+				found = true
+				break
+			}
+		}
+		if !found {
+			fmt.Println("Transaction committed to chain")
+			return nil
+		}
+		select {
+		case <-ticker.C:
+		case <-time.After(time.Until(deadline)):
+			return fmt.Errorf("timeout waiting for transaction after %v", duration)
+		}
+	}
 }
 
 func validatePointAndGetInfo(point string) (string, *types.Point, error) {
@@ -151,7 +199,10 @@ func handleTransaction(point, masterTicket, passphrase, target string,
 	return *tx, nil
 }
 
-// wallet generation (used downstream or directly)
+// wallet generation
+// a note about adjustLife: keyfiles are generated using the private keys
+// of the *previous* life value, so we need to generate the previous life's
+// keys and then generate the keyfile noun using the current life value
 func getWalletAndPoint(point, masterTicket, passphrase string, life int, adjustLife bool) (keygen.Wallet, *types.Point, string, error) {
 	masterTicket = strings.TrimPrefix(masterTicket, "~")
 	patp, pointInt, err := types.ValidateAndNormalizePatp(point)

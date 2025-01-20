@@ -16,20 +16,34 @@ jobs:
       tree-state: ${{ steps.ldflags.outputs.tree-state }}
     steps:
       - id: checkout
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # tag=v2.3.4
+        uses: actions/checkout@v2.3.4
         with:
           fetch-depth: 0
       - id: ldflags
         run: |
-          echo "commit-date=$(git log --date=iso8601-strict -1 --pretty=%ct)" >> "$GITHUB_OUTPUT"
-          echo "commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
-          echo "version=$(git describe --tags --always --dirty | cut -c2-)" >> "$GITHUB_OUTPUT"
-          echo "tree-state=$(if git diff --quiet; then echo "clean"; else echo "dirty"; fi)" >> "$GITHUB_OUTPUT"
+          echo "::debug::Generating build arguments..."
+          COMMIT_DATE=$(git log --date=iso8601-strict -1 --pretty=%ct)
+          COMMIT=$GITHUB_SHA
+          VERSION=$(git describe --tags --always --dirty | cut -c2-)
+          TREE_STATE=$(if git diff --quiet; then echo "clean"; else echo "dirty"; fi)
+          
+          echo "commit-date=$COMMIT_DATE" >> "$GITHUB_OUTPUT"
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tree-state=$TREE_STATE" >> "$GITHUB_OUTPUT"
+          
+          echo "::debug::Values generated:"
+          echo "::debug::commit-date: $COMMIT_DATE"
+          echo "::debug::commit: $COMMIT"
+          echo "::debug::version: $VERSION"
+          echo "::debug::tree-state: $TREE_STATE"
+
   build:
+    needs: args
     permissions:
-      id-token: write # To sign.
-      contents: write # To upload release assets.
-      actions: read   # To read workflow path.
+      id-token: write
+      contents: write
+      actions: read
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v2.0.0
     with:
       go-version: 1.23.2

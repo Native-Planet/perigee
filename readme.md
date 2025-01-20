@@ -14,8 +14,18 @@ For now this library can only perform L2 transactions.
 
 Set the `ROLLER_URL` env var for custom roller. Set the `ADMIN_TOKEN` env var if you want authentication in server mode.
 
+To run:
+- download latest release from sidebar
+- `chmod +x perigee-amd64 && mv perigee-amd64 perigee`
+- `./perigee`
+  
+To verify binary provenance:
+- download 
+- Use [slsa3-verifier](https://github.com/slsa-framework/slsa-verifier): `/slsa-verifier-linux-amd64 verify-artifact perigee-amd64 --provenance-path perigee-amd64.intoto.jsonl --source-uri=git+https://github.com/Native-Planet/perigee`
+
 To build: 
 - [install go](https://go.dev/doc/install) >=1.23.2 
+- `git clone https://github.com/Native-Planet/perigee && cd perigee`
 - `go build -o perigee .`
 
 To run docker container:

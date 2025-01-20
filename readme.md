@@ -14,7 +14,9 @@ For now this library can only perform L2 transactions.
 
 Set the `ROLLER_URL` env var for custom roller. Set the `ADMIN_TOKEN` env var if you want authentication in server mode.
 
-To build: `go build -o perigee`
+To build: 
+- [install go](https://go.dev/doc/install) >=1.23.2 
+- `go build -o perigee .`
 
 To run docker container:
 

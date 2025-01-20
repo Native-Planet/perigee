@@ -47,8 +47,8 @@ func Adopt(point, masterTicket, passphrase, adoptee string) (types.Transaction, 
 	return handleTransaction(point, masterTicket, passphrase, adoptee, roller.Client.Adopt)
 }
 
-func Breach(point, ticket, passphrase string, life int) (types.Transaction, error) {
-	wallet, _, patp, err := getWalletAndPoint(point, ticket, passphrase, life, false)
+func Breach(point, ticket, passphrase string) (types.Transaction, error) {
+	wallet, _, patp, err := getWalletAndPoint(point, ticket, passphrase, 0, false)
 	if err != nil {
 		return types.Transaction{}, err
 	}

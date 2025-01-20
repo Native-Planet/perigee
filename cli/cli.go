@@ -90,11 +90,7 @@ var ModBreachCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("error getting passphrase flag: %v", err)
 		}
-		life, err := cmd.Flags().GetInt("life")
-		if err != nil {
-			return fmt.Errorf("error getting life flag: %v", err)
-		}
-		keysTx, err := libprg.Breach(point, masterTicket, passphrase, life)
+		keysTx, err := libprg.Breach(point, masterTicket, passphrase)
 		if err != nil {
 			return fmt.Errorf("error processing breach: %v", err)
 		}

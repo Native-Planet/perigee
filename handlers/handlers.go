@@ -215,7 +215,7 @@ func ModBreach() http.HandlerFunc {
 		ticket := r.URL.Query().Get("ticket")
 		passphrase := r.URL.Query().Get("passphrase")
 
-		tx, err := libprg.Breach(point, ticket, passphrase, 0)
+		tx, err := libprg.Breach(point, ticket, passphrase)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error processing breach: %v", err), http.StatusInternalServerError)
 			return

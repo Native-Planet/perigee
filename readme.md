@@ -55,7 +55,7 @@ perigee generate-wallet --point=sampel-palnet --master-ticket=sampel-palnet-samp
 
 
 ### `get-keyfile`
-- generate a `@uv`-encoded keyfile to boot a ship
+- generate a `@uw`-encoded keyfile to boot a ship
 ##### server
 
 `curl http://localhost:8080/v1/gen/wallet\?ship=\~satmun-wacnup\&ticket=\~sampel-ticket-sampel-ticket\&life\=2`

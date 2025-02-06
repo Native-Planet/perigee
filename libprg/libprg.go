@@ -185,12 +185,8 @@ func setL1NetworkKeys(patp string, point *types.Point, wallet keygen.Wallet, bre
 	if err != nil {
 		return &ethTypes.Transaction{}, fmt.Errorf("failed to create transactor: %v", err)
 	}
-	if auth.GasPrice == nil || auth.GasPrice.Cmp(big.NewInt(0)) == 0 {
-		gasPrice, err := fetchGasPrice(ctx, client)
-		if err != nil {
-			return &ethTypes.Transaction{}, fmt.Errorf("failed to fetch gas price: %v", err)
-		}
-		auth.GasPrice = gasPrice
+	if err := getGas(ctx, client, auth, 5); err != nil {
+		return &ethTypes.Transaction{}, err
 	}
 	eclipticAddress := common.HexToAddress(EclipticContract)
 	eclip, err := ecliptic.NewEcliptic(eclipticAddress, client)
@@ -280,6 +276,22 @@ func addHexPrefix(s string) ([32]byte, error) {
 	}
 	copy(arr[:], bytes)
 	return arr, nil
+}
+
+func getGas(ctx context.Context, client *ethclient.Client, auth *bind.TransactOpts, maxRetries int) error {
+	for i := 0; i < maxRetries; i++ {
+		if auth.GasPrice == nil || auth.GasPrice.Cmp(big.NewInt(0)) == 0 {
+			gasPrice, err := fetchGasPrice(ctx, client)
+			if err == nil {
+				auth.GasPrice = gasPrice
+				return nil
+			}
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		return nil
+	}
+	return fmt.Errorf("failed to fetch gas price after %d retries", maxRetries)
 }
 
 func waitForReceipt(ctx context.Context, client *ethclient.Client, tx *ethTypes.Transaction) (*ethTypes.Receipt, error) {

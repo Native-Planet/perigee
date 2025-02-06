@@ -1,0 +1,3 @@
+[submodule "abi/azimuth"]
+	path = abi/azimuth
+	url = https://github.com/urbit/azimuth

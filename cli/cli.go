@@ -104,8 +104,12 @@ var ModBreachCmd = &cobra.Command{
 			if err != nil {
 				return fmt.Errorf("error getting wait flag: %v", err)
 			}
-			if err = libprg.Wait(duration, keysTx.Signature); err != nil {
-				return fmt.Errorf("error waiting for keys transaction: %v", err)
+			switch v := keysTx.(type) {
+			// if it returns an l2 receipt (l1 will wait on its own)
+			case types.Transaction:
+				if err = libprg.Wait(duration, v.Signature); err != nil {
+					return fmt.Errorf("error waiting for keys transaction: %v", err)
+				}
 			}
 		}
 		return nil

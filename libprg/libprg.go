@@ -3,21 +3,35 @@ package libprg
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Native-Planet/perigee/abi/ecliptic"
 	"github.com/Native-Planet/perigee/roller"
 	"github.com/Native-Planet/perigee/types"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/nathanlever/keygen"
 )
 
-const Version = "0.1.0"
+const (
+	Version                     = "0.2.0"
+	CRYPTO_SUITE_VERSION uint32 = 1
+	EclipticContract            = "0x33EeCbf908478C10614626A9D304bfe18B78DD73"
+)
 
 var (
+	EthProvider        = os.Getenv("ETH_PROVIDER")
 	ErrInvalidPoint    = errors.New("invalid point")
 	ErrInvalidLife     = errors.New("invalid life value")
 	ErrKeyMismatch     = errors.New("public key mismatch with PKI")
@@ -25,6 +39,12 @@ var (
 	ErrRollerOperation = errors.New("roller operation failed")
 	ctx                = context.Background()
 )
+
+type EclipticSession struct {
+	Contract     *ecliptic.Ecliptic
+	CallOpts     bind.CallOpts
+	TransactOpts bind.TransactOpts
+}
 
 func GetContext() context.Context {
 	return ctx
@@ -47,23 +67,39 @@ func Adopt(point, masterTicket, passphrase, adoptee string) (types.Transaction, 
 	return handleTransaction(point, masterTicket, passphrase, adoptee, roller.Client.Adopt)
 }
 
-func Breach(point, ticket, passphrase string) (types.Transaction, error) {
-	wallet, _, patp, err := getWalletAndPoint(point, ticket, passphrase, 0, false)
+func Breach(point, ticket, passphrase string) (interface{}, error) {
+	wallet, pointInfo, patp, err := getWalletAndPoint(point, ticket, passphrase, 0, false)
 	if err != nil {
 		return types.Transaction{}, err
 	}
-	privKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
-	if err != nil {
-		return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
+	if pointInfo.Dominion == "l2" {
+		privKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
+		if err != nil {
+			return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
+		}
+		keysTx, err := roller.Client.ConfigureKeys(ctx, patp,
+			"0x"+wallet.Network.Keys.Crypt.Public,
+			"0x"+wallet.Network.Keys.Auth.Public,
+			true, wallet.Ownership.Keys.Address, privKey)
+		if err != nil {
+			return types.Transaction{}, fmt.Errorf("%w: %v", ErrRollerOperation, err)
+		}
+		return *keysTx, nil
+	} else {
+		tx, err := setL1NetworkKeys(point, pointInfo, wallet, true)
+		if err != nil {
+			return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
+		}
+		ethClient, err := ethclient.Dial(EthProvider)
+		if err != nil {
+			return types.Transaction{}, fmt.Errorf("failed to connect to Ethereum node: %v", err)
+		}
+		receipt, err := waitForReceipt(ctx, ethClient, tx)
+		if err != nil {
+			return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
+		}
+		return receipt, nil
 	}
-	keysTx, err := roller.Client.ConfigureKeys(ctx, patp,
-		"0x"+wallet.Network.Keys.Crypt.Public,
-		"0x"+wallet.Network.Keys.Auth.Public,
-		true, wallet.Ownership.Keys.Address, privKey)
-	if err != nil {
-		return types.Transaction{}, fmt.Errorf("%w: %v", ErrRollerOperation, err)
-	}
-	return *keysTx, nil
 }
 
 func Pending(addr string) ([]types.PendingTx, error) {
@@ -124,6 +160,67 @@ func Keyfile(point, masterTicket, passphrase string, life int) (string, error) {
 	return keyfile, nil
 }
 
+func setL1NetworkKeys(patp string, point *types.Point, wallet keygen.Wallet, breach bool) (*ethTypes.Transaction, error) {
+	patp, pointInt, err := types.ValidateAndNormalizePatp(patp)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("%w: %v", ErrInvalidPoint, err)
+	}
+	if EthProvider == "" {
+		return &ethTypes.Transaction{}, fmt.Errorf("must set ETH_PROVIDER (ex: https://mainnet.infura.io/v3/<your-key>)")
+	}
+	client, err := ethclient.Dial(EthProvider)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("failed to connect to Ethereum: %v", err)
+	}
+	ctx := context.Background()
+	chainID, err := client.NetworkID(ctx)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("failed to get network ID: %v", err)
+	}
+	privateKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("failed to get private key: %v", err)
+	}
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("failed to create transactor: %v", err)
+	}
+	if err := getGas(ctx, client, auth, 5); err != nil {
+		return &ethTypes.Transaction{}, err
+	}
+	eclipticAddress := common.HexToAddress(EclipticContract)
+	eclip, err := ecliptic.NewEcliptic(eclipticAddress, client)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("failed to bind Ecliptic contract: %v", err)
+	}
+	publicCrypt, err := addHexPrefix(wallet.Network.Keys.Crypt.Public)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("invalid crypt key for %s: %v", patp, err)
+	}
+	publicAuth, err := addHexPrefix(wallet.Network.Keys.Auth.Public)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("invalid auth key for %s: %v", patp, err)
+	}
+	// Check if keys are already set
+	if strings.EqualFold(point.Network.Keys.Crypt, hex.EncodeToString(publicCrypt[:])) &&
+		strings.EqualFold(point.Network.Keys.Auth, hex.EncodeToString(publicAuth[:])) &&
+		!breach {
+		return &ethTypes.Transaction{}, fmt.Errorf("the network key is already set for %s", patp)
+	} else if strings.EqualFold(point.Network.Keys.Crypt, hex.EncodeToString(publicCrypt[:])) &&
+		strings.EqualFold(point.Network.Keys.Auth, hex.EncodeToString(publicAuth[:])) &&
+		breach {
+		fmt.Printf("Breaching with existing key revision for %s.", patp)
+	}
+	session := &ecliptic.EclipticSession{
+		Contract:     eclip,
+		TransactOpts: *auth,
+		CallOpts: bind.CallOpts{
+			From: auth.From,
+		},
+	}
+	return session.ConfigureKeys(pointInt, publicCrypt, publicAuth, CRYPTO_SUITE_VERSION, breach)
+}
+
 func Wait(duration time.Duration, keysTx string) error {
 	if duration == 0 {
 		return nil
@@ -167,6 +264,46 @@ func Wait(duration time.Duration, keysTx string) error {
 	}
 }
 
+func addHexPrefix(s string) ([32]byte, error) {
+	var arr [32]byte
+	s = strings.TrimPrefix(s, "0x")
+	bytes, err := hex.DecodeString(s)
+	if err != nil {
+		return arr, err
+	}
+	if len(bytes) != 32 {
+		return arr, errors.New("invalid length for key, must be 32 bytes")
+	}
+	copy(arr[:], bytes)
+	return arr, nil
+}
+
+func getGas(ctx context.Context, client *ethclient.Client, auth *bind.TransactOpts, maxRetries int) error {
+	for i := 0; i < maxRetries; i++ {
+		if auth.GasPrice == nil || auth.GasPrice.Cmp(big.NewInt(0)) == 0 {
+			gasPrice, err := fetchGasPrice(ctx, client)
+			if err == nil {
+				auth.GasPrice = gasPrice
+				return nil
+			}
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		return nil
+	}
+	return fmt.Errorf("failed to fetch gas price after %d retries", maxRetries)
+}
+
+func waitForReceipt(ctx context.Context, client *ethclient.Client, tx *ethTypes.Transaction) (*ethTypes.Receipt, error) {
+	for {
+		receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+		if err == nil {
+			return receipt, nil
+		}
+		time.Sleep(2 * time.Second)
+	}
+}
+
 func validatePointAndGetInfo(point string) (string, *types.Point, error) {
 	patp, _, err := types.ValidateAndNormalizePatp(point)
 	if err != nil {
@@ -183,6 +320,7 @@ func validatePointAndGetInfo(point string) (string, *types.Point, error) {
 func handleTransaction(point, masterTicket, passphrase, target string,
 	operation func(context.Context, string, string, string, *ecdsa.PrivateKey) (*types.Transaction, error)) (types.Transaction, error) {
 	masterTicket = strings.TrimPrefix(masterTicket, "~")
+	// 0 life param means look it up
 	wallet, _, patp, err := getWalletAndPoint(point, masterTicket, passphrase, 0, true) // true for life adjustment
 	if err != nil {
 		return types.Transaction{}, err
@@ -227,9 +365,13 @@ func getWalletAndPoint(point, masterTicket, passphrase string, life int, adjustL
 	}
 	wallet := keygen.GenerateWallet(masterTicket, uint32(pointInt), passphrase, uint(walletLife), true)
 	pointKey := strings.TrimPrefix(pInfo.Network.Keys.Crypt, "0x")
-	if wallet.Network.Keys.Crypt.Public != pointKey {
+	if wallet.Network.Keys.Crypt.Public != pointKey && adjustLife {
 		return keygen.Wallet{}, nil, "", fmt.Errorf("%w: expected 0x%s, got %s",
 			ErrKeyMismatch, wallet.Network.Keys.Crypt.Public, pInfo.Network.Keys.Crypt)
 	}
 	return wallet, pInfo, patp, nil
+}
+
+func fetchGasPrice(ctx context.Context, client *ethclient.Client) (*big.Int, error) {
+	return client.SuggestGasPrice(ctx)
 }

@@ -68,7 +68,7 @@ func Adopt(point, masterTicket, passphrase, adoptee string) (types.Transaction, 
 }
 
 func Breach(point, ticket, passphrase string) (interface{}, error) {
-	wallet, pointInfo, patp, err := getWalletAndPoint(point, ticket, passphrase, 0, true)
+	wallet, pointInfo, patp, err := getWalletAndPoint(point, ticket, passphrase, 0, false)
 	if err != nil {
 		return types.Transaction{}, err
 	}
@@ -132,7 +132,7 @@ func Point(point string) (types.PointResp, error) {
 }
 
 func Wallet(point, masterTicket, passphrase string, life int) (keygen.Wallet, error) {
-	wallet, _, _, err := getWalletAndPoint(point, masterTicket, passphrase, life, true)
+	wallet, _, _, err := getWalletAndPoint(point, masterTicket, passphrase, life, false)
 	if err != nil {
 		return keygen.Wallet{}, err
 	}
@@ -353,7 +353,7 @@ func getWalletAndPoint(point, masterTicket, passphrase string, life int, adjustL
 	}
 	wallet := keygen.GenerateWallet(masterTicket, uint32(pointInt), passphrase, uint(walletLife), true)
 	pointKey := strings.TrimPrefix(pInfo.Network.Keys.Crypt, "0x")
-	if wallet.Network.Keys.Crypt.Public != pointKey {
+	if wallet.Network.Keys.Crypt.Public != pointKey && adjustLife {
 		return keygen.Wallet{}, nil, "", fmt.Errorf("%w: expected 0x%s, got %s",
 			ErrKeyMismatch, wallet.Network.Keys.Crypt.Public, pInfo.Network.Keys.Crypt)
 	}

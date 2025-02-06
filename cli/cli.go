@@ -304,7 +304,6 @@ var GetWalletCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("error getting passphrase flag: %v", err)
 		}
-		fmt.Printf("%v %v %v %v\n", point, masterTicket, passphrase, life)
 		walletData, err := libprg.Wallet(point, masterTicket, passphrase, life)
 		if err != nil {
 			return fmt.Errorf("error generating wallet: %v", err)

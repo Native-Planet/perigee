@@ -3,52 +3,28 @@ package pontifex
 import (
 	"fmt"
 	"strings"
+
+	"github.com/Native-Planet/perigee/types"
 )
-
-// Symbol represents an SVG symbol template
-type Symbol struct {
-	SVG string
-}
-
-// Space represents the spacing mode for sigils
-type Space string
 
 const (
-	SpaceNone    Space = "none"
-	SpaceDefault Space = "default"
-	SpaceLarge   Space = "large"
+	stringNone    string = "none"
+	stringDefault string = "default"
+	stringLarge   string = "large"
+	DetailNone    string = "none"
+	DetailDefault string = "default"
 )
 
-// Detail represents the detail mode for sigils
-type Detail string
-
-const (
-	DetailNone    Detail = "none"
-	DetailDefault Detail = "default"
-)
-
-// Config holds the configuration for sigil generation
-type Config struct {
-	Point      string
-	Background string
-	Foreground string
-	Size       int
-	Space      Space
-	Detail     Detail
-}
-
-// DefaultConfig returns a default configuration
-func DefaultConfig() Config {
-	return Config{
+func DefaultConfig() types.SvgConfig {
+	return types.SvgConfig{
 		Size:       128,
 		Background: "#000",
 		Foreground: "#FFF",
-		Space:      SpaceDefault,
+		Space:      stringDefault,
 		Detail:     DetailDefault,
 	}
 }
 
-// chunkStr splits a string into equal-sized chunks
 func chunkStr(str string, size int) []string {
 	var chunks []string
 	runes := []rune(str)
@@ -67,7 +43,6 @@ func chunkStr(str string, size int) []string {
 	return chunks
 }
 
-// cleanPatp removes special characters from patp names
 func cleanPatp(point string) string {
 	point = strings.ReplaceAll(point, "~", "")
 	point = strings.ReplaceAll(point, "^", "")
@@ -75,7 +50,6 @@ func cleanPatp(point string) string {
 	return point
 }
 
-// calculateTransform returns the transform for a symbol based on its position
 func calculateTransform(size int, index int) string {
 	scale := float64(size) / 256.0
 
@@ -91,17 +65,16 @@ func calculateTransform(size int, index int) string {
 	}
 }
 
-// calculateGroupTransform calculates the group transformation based on phoneme length and space setting
-func calculateGroupTransform(size int, phonemeCount int, space Space) string {
+func calculateGroupTransform(size int, phonemeCount int, space string) string {
 	switch space {
-	case SpaceNone:
+	case stringNone:
 		switch phonemeCount {
 		case 1:
 			return "scale(2)"
 		default:
 			return ""
 		}
-	case SpaceLarge:
+	case stringLarge:
 		switch phonemeCount {
 		case 1:
 			return fmt.Sprintf("translate(%f,%f) scale(0.50)",
@@ -116,7 +89,7 @@ func calculateGroupTransform(size int, phonemeCount int, space Space) string {
 				(float64(size)*0.5)-(float64(size)*0.25),
 				(float64(size)*0.5)-(float64(size)*0.25))
 		}
-	default: // SpaceDefault
+	default:
 		switch phonemeCount {
 		case 1:
 			return fmt.Sprintf("translate(%f,%f) scale(0.75)",
@@ -134,13 +107,10 @@ func calculateGroupTransform(size int, phonemeCount int, space Space) string {
 	}
 }
 
-// GenerateSigil generates an SVG sigil based on the provided configuration
-func GenerateSigil(cfg Config) (string, error) {
+func GenerateSigil(cfg types.SvgConfig) (string, error) {
 	if cfg.Point == "" {
 		return "", fmt.Errorf("point must be provided")
 	}
-
-	// Apply defaults if not set
 	if cfg.Size == 0 {
 		cfg.Size = DefaultConfig().Size
 	}
@@ -156,48 +126,34 @@ func GenerateSigil(cfg Config) (string, error) {
 	if cfg.Detail == "" {
 		cfg.Detail = DefaultConfig().Detail
 	}
-
-	// Process point name
 	cleanPoint := cleanPatp(cfg.Point)
 	phonemes := chunkStr(cleanPoint, 3)
-
-	// Validate phoneme length
 	if len(phonemes) != 1 && len(phonemes) != 2 && len(phonemes) != 4 {
 		return "", fmt.Errorf("invalid point name length: %d", len(phonemes))
 	}
-
-	// Calculate height based on point type
 	height := cfg.Size
-	if cfg.Space == SpaceNone && len(phonemes) == 2 {
+	if cfg.Space == stringNone && len(phonemes) == 2 {
 		height = cfg.Size / 2
 	}
-
-	// Calculate stroke width
 	strokeWidth := "4"
 	if cfg.Size < 64 {
 		strokeWidth = fmt.Sprintf("%f", 256.0/float64(cfg.Size))
 	}
-
-	// Build inner SVG content
 	var innerSVG strings.Builder
 	for i, phoneme := range phonemes {
 		symbol, ok := symbolIndex[phoneme]
 		if !ok {
 			return "", fmt.Errorf("invalid phoneme: %s", phoneme)
 		}
-
 		transform := calculateTransform(cfg.Size, i)
 		symbolSVG := strings.ReplaceAll(symbol.SVG, "@FG", cfg.Foreground)
 		symbolSVG = strings.ReplaceAll(symbolSVG, "@BG", cfg.Background)
 		symbolSVG = strings.ReplaceAll(symbolSVG, "@TR", transform)
 		symbolSVG = strings.ReplaceAll(symbolSVG, "@SW", strokeWidth)
-
 		innerSVG.WriteString(symbolSVG)
 	}
 
 	groupTransform := calculateGroupTransform(cfg.Size, len(phonemes), cfg.Space)
-
-	// Generate final SVG
 	svg := fmt.Sprintf(`
     <svg
       style="display: block;"
@@ -215,6 +171,5 @@ func GenerateSigil(cfg Config) (string, error) {
   `, cfg.Size, height, cfg.Size, height,
 		cfg.Background, cfg.Size, height,
 		groupTransform, innerSVG.String())
-
 	return svg, nil
 }

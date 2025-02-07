@@ -57,12 +57,11 @@ func CreateSession(w http.ResponseWriter, ship, ticket string) {
 	http.SetCookie(w, cookie)
 }
 
-// GetTemplateFuncs returns the template functions for sigil generation
 func GetTemplateFuncs() template.FuncMap {
 	funcMapOnce.Do(func() {
 		funcMap = template.FuncMap{
 			"genSigil": func(patp string, size int) string {
-				svg, err := GenerateSigil(Config{
+				svg, err := GenerateSigil(types.SvgConfig{
 					Point: patp,
 					Size:  size,
 				})
@@ -72,7 +71,7 @@ func GetTemplateFuncs() template.FuncMap {
 				return svg
 			},
 			"smallSigil": func(patp string) string {
-				svg, err := GenerateSigil(Config{
+				svg, err := GenerateSigil(types.SvgConfig{
 					Point: patp,
 					Size:  32,
 				})
@@ -82,7 +81,7 @@ func GetTemplateFuncs() template.FuncMap {
 				return svg
 			},
 			"largeSigil": func(patp string) string {
-				svg, err := GenerateSigil(Config{
+				svg, err := GenerateSigil(types.SvgConfig{
 					Point: patp,
 					Size:  256,
 				})
@@ -97,23 +96,20 @@ func GetTemplateFuncs() template.FuncMap {
 }
 
 func setupTemplates() (*template.Template, error) {
-	// Create base template
 	tmpl := template.New("")
-
-	// Add our custom functions
 	tmpl = tmpl.Funcs(template.FuncMap{
 		"genSigil": func(patp string, size int) string {
-			svg, err := GenerateSigil(Config{
+			svg, err := GenerateSigil(types.SvgConfig{
 				Point: patp,
 				Size:  size,
 			})
 			if err != nil {
-				return "" // Consider logging the error
+				return ""
 			}
 			return svg
 		},
 		"smallSigil": func(patp string) string {
-			svg, err := GenerateSigil(Config{
+			svg, err := GenerateSigil(types.SvgConfig{
 				Point: patp,
 				Size:  32,
 			})
@@ -123,7 +119,7 @@ func setupTemplates() (*template.Template, error) {
 			return svg
 		},
 		"largeSigil": func(patp string) string {
-			svg, err := GenerateSigil(Config{
+			svg, err := GenerateSigil(types.SvgConfig{
 				Point: patp,
 				Size:  256,
 			})
@@ -136,13 +132,10 @@ func setupTemplates() (*template.Template, error) {
 			return html.HTML(s)
 		},
 	})
-
-	// Parse all templates
 	parsed, err := tmpl.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("parsing templates: %w", err)
 	}
-
 	return parsed, nil
 }
 
@@ -151,16 +144,13 @@ func NewHandler() (*Handler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("setup templates: %w", err)
 	}
-
 	staticFiles, err := fs.Sub(staticFS, "templates/static")
 	if err != nil {
 		return nil, fmt.Errorf("setup static files: %w", err)
 	}
-
 	h := &Handler{
 		tmpl: tmpl,
 	}
-
 	fileServer := http.FileServer(http.FS(staticFiles))
 	http.Handle("/static/", http.StripPrefix("/static/", fileServer))
 	return h, nil
@@ -174,7 +164,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleAuth(w, r)
 	case "/change-sponsor":
 		h.handleChangeSponsor(w, r)
-		// Add other routes
+		// other routes
 	}
 }
 

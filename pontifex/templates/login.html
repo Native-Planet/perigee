@@ -1,0 +1,41 @@
+{{define "login"}}
+    {{template "base" .}}
+{{end}}
+
+{{define "page-content"}}
+<div class="form-group">
+    <span class="centered">
+        <h4>Azimuth public key cryptography operation web portal</h4>
+        <div class="divider">★ ★ ★</div>
+    </span>
+    <form class="login-form" 
+          hx-post="/auth" 
+          hx-target="#main-content">
+        <div class="form-group">
+            <label for="ship">SHIP NAME</label>
+            <input type="text" 
+                   id="ship" 
+                   name="ship" 
+                   placeholder="~sampel-palnet" 
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="ticket">MASTER TICKET</label>
+            <input type="password" 
+                   id="ticket" 
+                   name="ticket" 
+                   required>
+        </div>
+
+        <button type="submit">Submit</button>
+
+        <div class="status">
+            <span class="centered">
+                <p class="blink" content-align="center">[ System Status: Online ]</p>
+            </span>
+        </div>
+    </form>
+    <div class="divider">✧ ✧ ✧</div>
+</div>
+{{end}}

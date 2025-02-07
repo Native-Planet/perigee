@@ -763,6 +763,78 @@ func (c *Client) SetManagementProxy(ctx context.Context, point, proxyAddress, si
 	}, nil
 }
 
+func (c *Client) SetSpawnProxy(ctx context.Context, point, proxyAddress, signingAddress string, privateKey *ecdsa.PrivateKey) (*Transaction, error) {
+	proxy, err := c.GetManagementProxyType(ctx, point, signingAddress)
+	if err != nil {
+		return nil, err
+	}
+	params := ProxyRequest{
+		Address: signingAddress,
+		From: FromData{
+			Ship:  point,
+			Proxy: proxy,
+		},
+		Data: struct {
+			Address string `json:"address"`
+		}{
+			Address: proxyAddress,
+		},
+	}
+
+	if err := c.addSignature(ctx, "setSpawnProxy", &params, privateKey); err != nil {
+		return nil, fmt.Errorf("add signature: %w", err)
+	}
+	result, err := c.DoRequest(ctx, "setSpawnProxy", params)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	var txHash string
+	if err := json.Unmarshal(result, &txHash); err != nil {
+		return nil, fmt.Errorf("unmarshal transaction hash: %w", err)
+	}
+	return &Transaction{
+		Signature: params.Signature,
+		Hash:      txHash,
+		Type:      "setSpawnProxy",
+	}, nil
+}
+
+func (c *Client) SetTransferProxy(ctx context.Context, point, proxyAddress, signingAddress string, privateKey *ecdsa.PrivateKey) (*Transaction, error) {
+	proxy, err := c.GetManagementProxyType(ctx, point, signingAddress)
+	if err != nil {
+		return nil, err
+	}
+	params := ProxyRequest{
+		Address: signingAddress,
+		From: FromData{
+			Ship:  point,
+			Proxy: proxy,
+		},
+		Data: struct {
+			Address string `json:"address"`
+		}{
+			Address: proxyAddress,
+		},
+	}
+
+	if err := c.addSignature(ctx, "setTransferProxy", &params, privateKey); err != nil {
+		return nil, fmt.Errorf("add signature: %w", err)
+	}
+	result, err := c.DoRequest(ctx, "setTransferProxy", params)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	var txHash string
+	if err := json.Unmarshal(result, &txHash); err != nil {
+		return nil, fmt.Errorf("unmarshal transaction hash: %w", err)
+	}
+	return &Transaction{
+		Signature: params.Signature,
+		Hash:      txHash,
+		Type:      "setTransferProxy",
+	}, nil
+}
+
 func (c *Client) GetSpawnProxyType(ctx context.Context, point, signingAddress string) (string, error) {
 	pointInfo, err := c.GetPoint(ctx, point)
 	if err != nil {

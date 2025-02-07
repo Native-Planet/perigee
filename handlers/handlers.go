@@ -153,7 +153,7 @@ func GetKeyfile() http.HandlerFunc {
 	}
 }
 
-func handleTransaction(w http.ResponseWriter, r *http.Request, f func(string, string, string, string) (types.Transaction, error)) {
+func handleTransaction(w http.ResponseWriter, r *http.Request, f func(string, string, string, string) (interface{}, error)) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

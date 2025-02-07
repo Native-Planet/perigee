@@ -1,0 +1,31 @@
+{{define "transfer-form"}}
+<div class="action-box">
+    <h3>Transfer {{.Type}}</h3>
+    <div class="info-section">
+        <form method="post" action="/transfer/{{.Type}}" class="transfer-form">
+            <input type="hidden" name="transfer_type" value="{{.Type}}">
+            <div class="info-row">
+                <span>Address:</span>
+                <div class="address-input-container">
+                    <input type="text" 
+                           id="address" 
+                           name="address" 
+                           class="address-display"
+                           placeholder="0x..."
+                           required>
+                </div>
+            </div>
+            <div class="transfer-buttons">
+                <button type="submit" class="action-button warning">
+                    Confirm Transfer
+                </button>
+                <button type="button" 
+                        class="action-button"
+                        onclick="this.closest('.action-box').remove()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}

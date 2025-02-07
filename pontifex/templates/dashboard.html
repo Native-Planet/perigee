@@ -1,0 +1,151 @@
+{{define "dashboard"}}
+    {{template "base" .}}
+{{end}}
+
+{{define "dashboard-content"}}
+<div class="content-section">
+    {{with .Point}}
+
+    <div class="action-box">
+        <h3>🪐 Identity</h3>
+        <div class="ship-header">
+            <div class="sigil-container">
+                {{genSigil .PatpName 128}}
+            </div>
+            <h2 class="ship-name">{{.PatpName}}</h2>
+            <div>
+                <span class="ship-dominion">
+                    <h3>{{.Point.Dominion}}</h3>
+                </span>
+            </div>
+        </div>
+        <div class="info-section">
+            <div class="info-row">
+                <span>Owner</span>
+                <div class="address-display">{{.Point.Ownership.Owner.Address}}</div>
+                <button class="action-button warning" 
+                        hx-post="/transfer/owner/form" 
+                        hx-target="#transfer-form">
+                    Transfer
+                </button>
+            </div>
+            <div class="info-row">
+                <span>Management</span>
+                <div class="address-display">{{.Point.Ownership.ManagementProxy.Address}}</div>
+                <button class="action-button warning"
+                        hx-post="/transfer/management/form"
+                        hx-target="#transfer-form">
+                    Transfer
+                </button>
+            </div>
+            <div class="info-row">
+                <span>Transfer proxy</span>
+                <div class="address-display">{{.Point.Ownership.TransferProxy.Address}}</div>
+                <button class="action-button warning"
+                        hx-post="/transfer/transfer-proxy/form"
+                        hx-target="#transfer-form">
+                    Transfer
+                </button>
+            </div>
+            {{if lt (.PatpName | len) 12}}
+            <div class="info-row">
+                <span>Spawn proxy</span>
+                <div class="address-display">{{.Point.Ownership.SpawnProxy.Address}}</div>
+                <button class="action-button warning"
+                        hx-post="/transfer/spawn-proxy/form"
+                        hx-target="#transfer-form">
+                    Transfer
+                </button>
+            </div>
+		    {{end}}
+            {{if lt (.PatpName | len) 6}}
+            <div class="info-row">
+                <span>Voting proxy</span>
+                <div class="address-display">{{.Point.Ownership.VotingProxy.Address}}</div>
+                <button class="action-button warning"
+                        hx-post="/transfer/voting-proxy/form"
+                        hx-target="#transfer-form">
+                    Transfer
+                </button>
+            </div>
+		    {{end}}
+        </div>
+        <div class="download-section">
+            <form method="post" action="/download/wallet" style="display: inline;">
+                <button class="action-button" type="submit">Download wallet</button>
+            </form>
+            <form method="post" action="/download/keyfile" style="display: inline;">
+                <button class="action-button" type="submit">Download keyfile</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="transfer-form"></div>
+
+    <div class="action-box">
+        <h3>🔑 Keys</h3>
+
+        <div class="info-section">
+            <span>Network Keys (Life: {{.Point.Network.Keys.Life}}, Rift: {{.Point.Network.Rift}})</span>
+            <div class="key-row">
+                <span>Authentication:</span>
+                <div class="address-display">{{.Point.Network.Keys.Auth}}</div>
+            </div>
+            
+            <div class="key-row">
+                <span>Encryption:</span>
+                <div class="address-display">{{.Point.Network.Keys.Crypt}}</div>
+            </div>
+            <div class="centered">
+                <form method="post" action="/breach" style="display: inline;">
+                    <button type="submit" 
+                            class="action-button warning"
+                            onclick="return confirm('Are you sure you want to breach network keys?')">
+                        Breach
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="breach-form"></div>
+
+    <div class="action-box">
+        <h3>👪 Sponsorship</h3>
+        
+        <div class="info-section">
+            {{ if .Point.Network.Sponsor.Has }}
+            <div class="sponsor-section">
+                <div class="sponsor-info">
+                    <div class="sponsor-text">
+                        <span>Sponsor:</span>
+                        <span class="monospace">{{.Point.Network.Sponsor.Patp}}</span>
+                    </div>
+                    <div class="sponsor-sigil">
+                        {{genSigil .Point.Network.Sponsor.Patp 64}}
+                    </div>
+                </div>
+                <div class="sponsor-buttons">
+                    <button class="action-button warning" 
+                            hx-post="/escape/form" 
+                            hx-target="#sponsor-form">
+                        Escape
+                    </button>
+                    <form method="post" action="/escape/cancel" style="display: inline;">
+                        <button type="submit" 
+                                class="action-button"
+                                onclick="return confirm('Cancel current escape?')">
+                            Cancel Escape
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {{ end }}
+        </div>
+    </div>
+
+    <div id="sponsor-form"></div>
+    {{end}}
+</div>
+
+{{end}}

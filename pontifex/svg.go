@@ -1,6 +1,8 @@
 package pontifex
 
-var symbolIndex = map[string]Symbol{
+import "github.com/Native-Planet/perigee/types"
+
+var symbolIndex = map[string]types.SvgSymbol{
 	"bac": {SVG: `<g transform='@TR'><path d='M0 0C0 70.6925 57.3075 128 128 128V0H0Z' fill='@FG' stroke='@BG' stroke-width='@SW'/><line x1='-0.0029152' x2='127.983' y2='127.986' stroke='@BG' stroke-linecap='square' fill='none' stroke-width='@SW'/><circle cx='64' cy='64' r='11.5' fill='@FG' stroke='@FG' stroke-width='@SW'/><circle cx='64' cy='64' r='9' fill='@BG' stroke='@BG' stroke-width='@SW'/><circle cx='16' cy='112' r='11.5' fill='@BG' stroke='@BG' stroke-width='@SW'/><circle cx='16' cy='112' r='9' fill='@FG' stroke='@FG' stroke-width='@SW'/></g>`},
 	"bal": {SVG: `<g transform='@TR'><path d='M0.0541 0C70.7217 0.0292317 128 57.3256 128 128C57.3177 128 0.0164917 70.7089 7.62806e-06 0.0305091C7.62851e-06 0.0203397 -4.44317e-10 0.01017 0 0H0.0541Z' fill='@FG' stroke='@BG' stroke-width='@SW'/><circle cx='32' cy='32' r='11.5' fill='@FG' stroke='@FG' stroke-width='@SW'/><circle cx='32' cy='32' r='9' fill='@BG' stroke='@BG' stroke-width='@SW'/><line x1='0.5' y1='-0.5' x2='181.5' y2='-0.5' transform='matrix(-0.707107 0.707107 0.707107 0.707107 128.71 0)' stroke='@BG' stroke-linecap='square' fill='none' stroke-width='@SW'/><line x1='128' y1='32.0072' x2='32.7071' y2='127.3' stroke='@BG' stroke-linecap='square' fill='none' stroke-width='@SW'/><line x1='128' y1='64.0072' x2='64.7071' y2='127.3' stroke='@BG' stroke-linecap='square' fill='none' stroke-width='@SW'/><line x1='128' y1='96.0072' x2='96.7071' y2='127.3' stroke='@BG' stroke-linecap='square' fill='none' stroke-width='@SW'/></g>`},
 	"ban": {SVG: `<g transform='@TR'><path d='M0 0C0 70.6925 57.3075 128 128 128V0H0Z' fill='@FG' stroke='@BG' stroke-width='@SW'/><path d='M128 0C128 70.6924 70.6924 128 -1.52588e-05 128' stroke='@BG' fill='none' stroke-width='@SW'/></g>`},

@@ -8,6 +8,7 @@ import (
 	"github.com/Native-Planet/perigee/cli"
 	"github.com/Native-Planet/perigee/handlers"
 	"github.com/Native-Planet/perigee/logger"
+	"github.com/Native-Planet/perigee/pontifex"
 	"github.com/Native-Planet/perigee/roller"
 
 	"github.com/spf13/cobra"
@@ -86,17 +87,23 @@ func init() {
 }
 
 func runServer() error {
+	handler, err := pontifex.NewHandler()
+	if err != nil {
+		return err
+	}
 
-	http.HandleFunc("/v1/get/wallet", handlers.Auth(handlers.GetWallet()))
-	http.HandleFunc("/v1/get/point", handlers.Auth(handlers.GetPoint()))
-	http.HandleFunc("/v1/get/pending", handlers.Auth(handlers.GetPending()))
-	http.HandleFunc("/v1/mod/breach", handlers.Auth(handlers.ModBreach()))
-	http.HandleFunc("/v1/mod/escape", handlers.Auth(handlers.ModEscape()))
-	http.HandleFunc("/v1/mod/cancel-escape", handlers.Auth(handlers.ModCancelEscape()))
-	http.HandleFunc("/v1/mod/adopt", handlers.Auth(handlers.ModAdopt()))
+	http.HandleFunc("/v1/get/wallet", handlers.GetWallet())
+	http.HandleFunc("/v1/get/point", handlers.GetPoint())
+	http.HandleFunc("/v1/get/pending", handlers.GetPending())
+	http.HandleFunc("/v1/mod/breach", handlers.ModBreach())
+	http.HandleFunc("/v1/mod/escape", handlers.ModEscape())
+	http.HandleFunc("/v1/mod/cancel-escape", handlers.ModCancelEscape())
+	http.HandleFunc("/v1/mod/adopt", handlers.ModAdopt())
 
 	http.HandleFunc("/healthz", handlers.ReadinessProbe)
 	http.HandleFunc("/readyz", handlers.LivenessProbe)
+
+	http.Handle("/", handler)
 
 	zap.L().Info(fmt.Sprintf("Using roller endpoint %s", roller.RollerURL))
 	addr := fmt.Sprintf(":%s", port)

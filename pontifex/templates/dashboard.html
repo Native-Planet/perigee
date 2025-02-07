@@ -1,0 +1,108 @@
+{{define "dashboard"}}
+    {{template "base" .}}
+{{end}}
+
+{{define "dashboard-content"}}
+<div class="content-section">
+    {{with .Point}}
+    <h2>Your ship: {{.PatpName}}</h2>
+    <div class="sigil-container">
+        {{genSigil .PatpName 128}}
+    </div>
+    <div class="action-box">
+        <h3>🪐 Identity</h3>
+        <div class="info-row">
+            <span>Owner</span>
+            <div class="address-display">{{.Point.Ownership.Owner.Address}}</div>
+            <button class="action-button warning" 
+                    hx-post="/transfer-owner" 
+                    hx-target="#transfer-form">
+                Transfer
+            </button>
+        </div>
+        <div class="info-row">
+            <span>Management</span>
+            <div class="address-display">{{.Point.Ownership.ManagementProxy.Address}}</div>
+            <button class="action-button warning"
+                    hx-post="/transfer-management"
+                    hx-target="#transfer-form">
+                Transfer
+            </button>
+        </div>
+    </div>
+
+    <div class="action-box">
+        <h3>👪 Sponsorship</h3>
+        
+        <div class="info-section">
+            <div class="info-row">
+                <span>Sponsor:</span>
+                <span class="monospace">
+                    <a href="https://network.urbit.org/{{.Point.Network.Sponsor.Patp}}">
+                        {{.Point.Network.Sponsor.Patp}}
+                    </a>
+                </span>
+            </div>
+            <div class="action-grid">
+                <button class="action-button warning"
+                        hx-post="/escape"
+                        hx-confirm="Are you sure you want to initiate escape?">
+                    Escape
+                </button>
+                <button class="action-button"
+                        hx-post="/cancel-escape"
+                        hx-confirm="Cancel current escape?">
+                    Cancel Escape
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="action-box">
+        <h3>🔑 Network Configuration</h3>
+
+        <div class="info-section">
+            <div class="info-header">
+                <span>Network Keys (Life: {{.Point.Network.Keys.Life}})</span>
+                <button class="action-button warning"
+                        hx-post="/breach-keys"
+                        hx-confirm="Are you sure you want to breach network keys?">
+                    BREACH
+                </button>
+            </div>
+            
+            <div class="key-row">
+                <span>Authentication:</span>
+                <div class="address-display">{{.Point.Network.Keys.Auth}}</div>
+            </div>
+            
+            <div class="key-row">
+                <span>Encryption:</span>
+                <div class="address-display">{{.Point.Network.Keys.Crypt}}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-box">
+        <h3>📦 Downloads</h3>
+        <div class="action-grid">
+            <button class="action-button"
+                    hx-get="/download/wallet"
+                    hx-target="#download-status">
+                Download Wallet
+            </button>
+            <button class="action-button"
+                    hx-get="/download/keyfile"
+                    hx-target="#download-status">
+                Download Keyfile
+            </button>
+        </div>
+        <div id="download-status" class="status-box"></div>
+    </div>
+    {{end}}
+</div>
+
+<div id="transfer-form"></div>
+<div id="sponsor-form"></div>
+
+{{end}}

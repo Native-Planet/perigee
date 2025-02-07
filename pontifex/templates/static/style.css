@@ -1,0 +1,333 @@
+body {
+    font-family: "Courier New", Courier, monospace;
+    background-color: #CCCCCC;
+    color: #000080;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVQImWNgYGD4z0AEgAAVAAFJOxt9AAAAAElFTkSuQmCC");
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 20px;
+    border: 2px solid #000080;
+    box-shadow: 5px 5px 0 #000080;
+}
+
+.header {
+    text-align: center;
+    border-bottom: 2px solid #000080;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+}
+
+.header h1 {
+    color: #000080;
+    font-size: 48px;
+    margin: 0;
+}
+
+.centered {
+    text-align: center;
+}
+
+.nav {
+    margin: 20px 0;
+    padding: 10px;
+    background: #000080;
+    color: #fff;
+}
+
+.nav a {
+    color: #fff;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+.nav a:hover {
+    text-decoration: underline;
+}
+
+.content {
+    padding: 20px;
+    background: #fff;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #000080;
+    font-family: "Courier New", Courier, monospace;
+    margin-bottom: 10px;
+}
+
+button {
+    background: #000080;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    width: 160px;
+    max-width: 160px;
+    cursor: pointer;
+    font-family: "Courier New", Courier, monospace;
+}
+
+button:hover {
+    background: #0000a0;
+}
+
+.status {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #000080;
+    background: #f0f0f0;
+}
+
+/* Retro decorations */
+.divider {
+    text-align: center;
+    margin: 20px 0;
+    color: #000080;
+}
+
+.divider::before,
+.divider::after {
+    content: "* * *";
+    margin: 0 10px;
+}
+
+.blink {
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+
+.login-form {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: rgba(85, 85, 85, 0.526)080;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 16px;
+    background: #f9f9f9;
+}
+
+button {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-family: "Courier New", Courier, monospace;
+    border-radius: 3px;
+    width: 100%;
+}
+
+.response-area {
+    font-family: "Courier New", Courier, monospace;
+    background: #000080;
+    color: #fff;
+    padding: 10px;
+    margin-top: 20px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+.monospace {
+font-family: "Courier New", Courier, monospace;
+}
+
+.address-display {
+    background: #000080;
+    color: #fff;
+    padding: 4px 8px;
+    font-family: monospace;
+    border: 1px solid #000;
+}
+
+.action-box {
+    border: 2px solid #000080;
+    margin: 15px 0;
+    padding: 15px;
+    background: #f0f0f0;
+}
+
+.action-box h3 {
+    margin-top: 0;
+    border-bottom: 2px solid #000080;
+    padding-bottom: 5px;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.action-button {
+    background: #c0c0c0;
+    color: #000;
+    border: 2px outset #fff;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 14px;
+    box-shadow: 1px 1px 0 #000;
+    text-align: center;
+    min-width: 80px;
+    position: relative;
+    margin: 4px;
+}
+
+.action-button:active {
+    border-style: inset;
+    background: #b0b0b0;
+    transform: translateX(1px) translateY(1px);
+}
+
+.action-button:hover {
+    background: #d0d0d0;
+}
+
+.action-button.warning {
+    background: #c0c0c0;
+    color: #800000;
+    font-weight: bold;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    padding: 5px;
+}
+
+.info-section {
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #808080;
+    background: #d4d0c8;
+}
+
+.info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 5px;
+    background: #c0c0c0;
+    border: 1px solid #808080;
+}
+
+.key-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 5px 0;
+    padding: 5px;
+}
+
+.key-row span {
+    min-width: 120px;
+}
+
+.key-row .address-display {
+    flex: 1;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.address-display {
+    background: #fff;
+    color: #000;
+    padding: 2px 6px;
+    font-family: monospace;
+    border: 2px inset #fff;
+    flex: 1;
+}
+
+.action-box {
+    border: 2px solid #000080;
+    margin: 15px 0;
+    padding: 15px;
+    background: #c0c0c0;
+}
+
+.action-box h3 {
+    margin: -15px -15px 15px -15px;
+    padding: 5px 15px;
+    background: #000080;
+    color: #fff;
+    font-size: 14px;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.status-box {
+    border: 2px inset #fff;
+    padding: 8px;
+    margin: 10px 0;
+    background: #fff;
+    font-family: "Courier New", Courier, monospace;
+}
+
+.warning {
+    color: #800000;
+    font-weight: bold;
+}
+
+.status-box {
+    border: 1px solid #000080;
+    padding: 8px;
+    margin: 10px 0;
+    background: #fff;
+}
+
+.pixelated-border {
+    border-style: double;
+    border-width: 3px;
+    border-color: #000080;
+}

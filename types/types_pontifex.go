@@ -1,9 +1,10 @@
 package types
 
 type Session struct {
-	Ship   string
-	Ticket string
-	Point  PointResp
+	Ship       string
+	Ticket     string
+	Passphrase string
+	Point      PointResp
 }
 
 type SigilConfig struct {

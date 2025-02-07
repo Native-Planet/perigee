@@ -14,7 +14,9 @@
             </div>
             <h2 class="ship-name">{{.PatpName}}</h2>
             <div>
-                <h3 class="ship-dominion">Dominion: {{.Point.Dominion}}</h3>
+                <span class="ship-dominion">
+                    <h3>{{.Point.Dominion}}</h3>
+                </span>
             </div>
         </div>
         <div class="info-section">
@@ -22,7 +24,7 @@
                 <span>Owner</span>
                 <div class="address-display">{{.Point.Ownership.Owner.Address}}</div>
                 <button class="action-button warning" 
-                        hx-post="/transfer-owner" 
+                        hx-post="/transfer/owner/form" 
                         hx-target="#transfer-form">
                     Transfer
                 </button>
@@ -31,7 +33,7 @@
                 <span>Management</span>
                 <div class="address-display">{{.Point.Ownership.ManagementProxy.Address}}</div>
                 <button class="action-button warning"
-                        hx-post="/transfer-management"
+                        hx-post="/transfer/management/form"
                         hx-target="#transfer-form">
                     Transfer
                 </button>
@@ -40,7 +42,7 @@
                 <span>Transfer proxy</span>
                 <div class="address-display">{{.Point.Ownership.TransferProxy.Address}}</div>
                 <button class="action-button warning"
-                        hx-post="/transfer-transfer-proxy"
+                        hx-post="/transfer/transfer-proxy/form"
                         hx-target="#transfer-form">
                     Transfer
                 </button>
@@ -50,7 +52,18 @@
                 <span>Spawn proxy</span>
                 <div class="address-display">{{.Point.Ownership.SpawnProxy.Address}}</div>
                 <button class="action-button warning"
-                        hx-post="/transfer-spawn-proxy"
+                        hx-post="/transfer/spawn-proxy/form"
+                        hx-target="#transfer-form">
+                    Transfer
+                </button>
+            </div>
+		    {{end}}
+            {{if lt (.PatpName | len) 6}}
+            <div class="info-row">
+                <span>Voting proxy</span>
+                <div class="address-display">{{.Point.Ownership.VotingProxy.Address}}</div>
+                <button class="action-button warning"
+                        hx-post="/transfer/voting-proxy/form"
                         hx-target="#transfer-form">
                     Transfer
                 </button>
@@ -84,12 +97,13 @@
                 <div class="address-display">{{.Point.Network.Keys.Crypt}}</div>
             </div>
             <div class="centered">
-                <button class="action-button warning"
-                        hx-post="/breach-keys"
-                        hx-confirm="Are you sure you want to breach network keys?"
-                        hx-target="#breach-form">
-                    BREACH
-                </button>
+                <form method="post" action="/breach" style="display: inline;">
+                    <button type="submit" 
+                            class="action-button warning"
+                            onclick="return confirm('Are you sure you want to breach network keys?')">
+                        Breach
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -111,16 +125,19 @@
                         {{genSigil .Point.Network.Sponsor.Patp 64}}
                     </div>
                 </div>
-                
                 <div class="sponsor-buttons">
-                    <button class="action-button warning" hx-post="/escape"
-                        hx-confirm="Are you sure you want to initiate escape?">
-                            Escape
+                    <button class="action-button warning" 
+                            hx-post="/escape/form" 
+                            hx-target="#sponsor-form">
+                        Escape
                     </button>
-                    <button class="action-button" hx-post="/cancel-escape"
-                        hx-confirm="Cancel current escape?">
+                    <form method="post" action="/escape/cancel" style="display: inline;">
+                        <button type="submit" 
+                                class="action-button"
+                                onclick="return confirm('Cancel current escape?')">
                             Cancel Escape
-                    </button>
+                        </button>
+                    </form>
                 </div>
             </div>
             {{ end }}

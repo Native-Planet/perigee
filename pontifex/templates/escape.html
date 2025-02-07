@@ -1,0 +1,30 @@
+{{define "escape-form"}}
+<div class="action-box">
+    <h3>Escape to New Sponsor</h3>
+    <div class="info-section">
+        <form method="post" action="/escape" class="transfer-form">
+            <div class="info-row">
+                <span>New Sponsor:</span>
+                <div class="address-input-container">
+                    <input type="text" 
+                           id="sponsor" 
+                           name="sponsor" 
+                           class="address-display"
+                           placeholder="~sampel-palnet"
+                           required>
+                </div>
+            </div>
+            <div class="transfer-buttons">
+                <button type="submit" class="action-button warning">
+                    Confirm Escape
+                </button>
+                <button type="button" 
+                        class="action-button"
+                        onclick="this.closest('.action-box').remove()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}

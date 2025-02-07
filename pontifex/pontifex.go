@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"text/template"
 
@@ -170,6 +171,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleDownloadWallet(w, r)
 	case "/download/keyfile":
 		h.handleDownloadKeyfile(w, r)
+	case "/breach":
+		h.handleBreach(w, r)
+	case "/transfer/owner/form", "/transfer/management/form", "/transfer/transfer-proxy/form",
+		"/transfer/spawn-proxy/form", "/transfer/voting-proxy/form":
+		h.handleTransferForm(w, r)
+	case "/transfer/owner", "/transfer/management", "/transfer/transfer-proxy",
+		"/transfer/spawn-proxy", "/transfer/voting-proxy":
+		h.handleTransferSubmit(w, r)
+	case "/transfer/cancel":
+		h.handleTransferCancel(w, r)
+	case "/escape/form":
+		h.handleEscapeForm(w, r)
+	case "/escape/cancel":
+		h.handleCancelEscape(w, r)
+	case "/escape":
+		h.handleEscape(w, r)
+	case "adopt":
+		h.handleAdopt(w, r)
 	}
 }
 
@@ -246,17 +265,24 @@ func (h *Handler) handleDownloadWallet(w http.ResponseWriter, r *http.Request) {
 	}
 	wallet, err := libprg.Wallet(session.Ship, session.Ticket, "", life)
 	if err != nil {
+		fmt.Printf("Wallet generation error: %v\n", err)
 		http.Error(w, "Failed to generate wallet", http.StatusInternalServerError)
 		return
 	}
-	walletJSON, err := json.MarshalIndent(wallet, "", "  ")
+	walletJSON, err := json.Marshal(wallet)
 	if err != nil {
 		http.Error(w, "Failed to marshal wallet", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-wallet-%s.json", session.Ship, session.Point.Point.Network.Keys.Life))
-	w.Write(walletJSON)
+	var walletMap map[string]interface{}
+	if err := json.Unmarshal(walletJSON, &walletMap); err != nil {
+		http.Error(w, "Failed to process wallet data", http.StatusInternalServerError)
+		return
+	}
+	nfoContent := formatToNFO(walletMap, fmt.Sprintf("%s WALLET", strings.ToUpper(session.Ship)))
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-wallet.nfo", strings.TrimPrefix(session.Ship, "~")))
+	w.Write([]byte(nfoContent))
 }
 
 func (h *Handler) handleDownloadKeyfile(w http.ResponseWriter, r *http.Request) {
@@ -278,6 +304,223 @@ func (h *Handler) handleDownloadKeyfile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-%s.key", cleanPatp(session.Ship), session.Point.Point.Network.Keys.Life))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-%s.key", strings.TrimPrefix(session.Ship, "~"), session.Point.Point.Network.Keys.Life))
 	w.Write([]byte(keyfile))
+}
+
+func (h *Handler) handleBreach(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.Session
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	receipt, err := libprg.Breach(session.Ship, session.Ticket, session.Passphrase)
+	if err != nil {
+		http.Error(w, "Failed to breach network keys", http.StatusInternalServerError)
+		return
+	}
+	nfoContent := formatToNFO(receipt, "NETWORK BREACH RECEIPT")
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-breach-receipt.nfo", session.Ship))
+	w.Write([]byte(nfoContent))
+}
+
+// Add these new types to your types package
+type TransferFormData struct {
+	Type string
+}
+
+type TransferRequest struct {
+	TransferType string `json:"transfer_type"`
+	Address      string `json:"address"`
+}
+
+// Add these new handler functions to your Handler struct
+func (h *Handler) handleTransferForm(w http.ResponseWriter, r *http.Request) {
+	transferType := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/transfer/"), "/form")
+	data := TransferFormData{
+		Type: transferType,
+	}
+
+	if err := h.tmpl.ExecuteTemplate(w, "transfer-form", data); err != nil {
+		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) handleTransferSubmit(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.Session
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+	transferType := strings.TrimPrefix(r.URL.Path, "/transfer/")
+	address := r.FormValue("address")
+	var receipt interface{}
+	switch transferType {
+	case "owner":
+		receipt, err = libprg.TransferOwnership(session.Ship, session.Ticket, session.Passphrase, address, true)
+	case "management":
+		receipt, err = libprg.SetManagementProxy(session.Ship, session.Ticket, session.Passphrase, address)
+	case "transfer-proxy":
+		receipt, err = libprg.SetTransferProxy(session.Ship, session.Ticket, session.Passphrase, address)
+	case "spawn-proxy":
+		receipt, err = libprg.SetSpawnProxy(session.Ship, session.Ticket, session.Passphrase, address)
+	case "voting-proxy":
+		receipt, err = libprg.SetVotingProxy(session.Ship, session.Ticket, session.Passphrase, address)
+	default:
+		http.Error(w, "Invalid transfer type", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Transfer failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+	nfoContent := formatToNFO(receipt, fmt.Sprintf("%s TRANSFER RECEIPT", strings.ToUpper(transferType)))
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-%s-transfer-receipt.nfo",
+		strings.TrimPrefix(session.Ship, "~"),
+		strings.ReplaceAll(transferType, "-", "_")))
+	w.Write([]byte(nfoContent))
+}
+
+func (h *Handler) handleTransferCancel(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(""))
+}
+
+func (h *Handler) handleEscapeForm(w http.ResponseWriter, r *http.Request) {
+	if err := h.tmpl.ExecuteTemplate(w, "escape-form", nil); err != nil {
+		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) handleEscape(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+	sponsor := r.FormValue("sponsor")
+	if sponsor == "" {
+		http.Error(w, "No sponsor specified", http.StatusBadRequest)
+		return
+	}
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.Session
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	receipt, err := libprg.Escape(session.Ship, session.Ticket, session.Passphrase, sponsor)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to initiate escape: %v", err), http.StatusInternalServerError)
+		return
+	}
+	nfoContent := formatToNFO(receipt, "ESCAPE REQUEST RECEIPT")
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Disposition",
+		fmt.Sprintf("attachment; filename=%s-escape-receipt.nfo",
+			strings.TrimPrefix(session.Ship, "~")))
+	w.Write([]byte(nfoContent))
+}
+
+func (h *Handler) handleCancelEscape(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.Session
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	receipt, err := libprg.CancelEscape(session.Ship, session.Ticket, session.Passphrase, "")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to cancel escape: %v", err), http.StatusInternalServerError)
+		return
+	}
+	nfoContent := formatToNFO(receipt, "ESCAPE CANCELLATION RECEIPT")
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Disposition",
+		fmt.Sprintf("attachment; filename=%s-escape-cancel-receipt.nfo",
+			strings.TrimPrefix(session.Ship, "~")))
+	w.Write([]byte(nfoContent))
+}
+
+func (h *Handler) handleAdopt(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+	adoptee := r.FormValue("adoptee")
+	if adoptee == "" {
+		http.Error(w, "No adoptee specified", http.StatusBadRequest)
+		return
+	}
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.Session
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	receipt, err := libprg.Adopt(session.Ship, session.Ticket, session.Passphrase, adoptee)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to adopt point: %v", err), http.StatusInternalServerError)
+		return
+	}
+	nfoContent := formatToNFO(receipt, "ADOPTION RECEIPT")
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Disposition",
+		fmt.Sprintf("attachment; filename=%s-adopt-%s-receipt.nfo",
+			strings.TrimPrefix(session.Ship, "~"),
+			strings.TrimPrefix(adoptee, "~")))
+	w.Write([]byte(nfoContent))
 }

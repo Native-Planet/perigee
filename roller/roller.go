@@ -100,6 +100,14 @@ func (r *Roller) SetManagementProxy(ctx context.Context, point, proxyAddress, si
 	return r.client.SetManagementProxy(ctx, point, proxyAddress, signingAddress, privateKey)
 }
 
+func (r *Roller) SetSpawnProxy(ctx context.Context, point, proxyAddress, signingAddress string, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+	return r.client.SetSpawnProxy(ctx, point, proxyAddress, signingAddress, privateKey)
+}
+
+func (r *Roller) SetTransferProxy(ctx context.Context, point, proxyAddress, signingAddress string, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+	return r.client.SetTransferProxy(ctx, point, proxyAddress, signingAddress, privateKey)
+}
+
 // roller meta
 
 func (r *Roller) GetRollerConfig(ctx context.Context) (*types.RollerConfig, error) {

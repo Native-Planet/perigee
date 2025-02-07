@@ -87,7 +87,7 @@ func init() {
 }
 
 func runServer() error {
-	handler, err := pontifex.NewHandler()
+	web, err := pontifex.NewHandler()
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func runServer() error {
 	http.HandleFunc("/healthz", handlers.ReadinessProbe)
 	http.HandleFunc("/readyz", handlers.LivenessProbe)
 
-	http.Handle("/", handler)
+	http.Handle("/", web)
 
 	zap.L().Info(fmt.Sprintf("Using roller endpoint %s", roller.RollerURL))
 	addr := fmt.Sprintf(":%s", port)

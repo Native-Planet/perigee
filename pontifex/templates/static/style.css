@@ -355,8 +355,14 @@ font-family: "Courier New", Courier, monospace;
 .ship-dominion {
     font-size: 18px;
     color: #000080;
+    padding: 5px 5px;;
+    margin: 0px 0;
     text-transform: capitalize;
     font-family: "Courier New", monospace;
+}
+
+.ship-dominion h3 {
+    padding-bottom: 0px;
 }
 
 .sigil-container {
@@ -428,3 +434,57 @@ font-family: "Courier New", Courier, monospace;
     min-width: 150px;
     margin: 0;
  }
+
+ .transfer-form {
+    width: 100%;
+    font-family: "Courier New", Courier, monospace;
+}
+
+.transfer-form .info-row {
+    margin: 15px 0;
+}
+
+.transfer-form .address-input-container {
+    grid-column: span 2;
+}
+
+.transfer-form input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 2px inset #fff;
+    background: white;
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    color: #000080;
+}
+
+.transfer-form input[type="text"]::placeholder {
+    color: #808080;
+}
+
+.transfer-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    padding: 10px;
+}
+
+.transfer-buttons .action-button {
+    min-width: 150px;
+    margin: 0;
+}
+
+.transfer-success {
+    background: #d4d0c8;
+    border: 2px outset #fff;
+    padding: 15px;
+    text-align: center;
+    color: #000080;
+}
+
+.transfer-success p {
+    margin-bottom: 15px;
+    font-family: "Courier New", monospace;
+}
+ 

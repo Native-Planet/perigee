@@ -3,10 +3,12 @@ package pontifex
 import (
 	"crypto/rand"
 	"embed"
+	"encoding/json"
 	"fmt"
 	html "html/template"
 	"io/fs"
 	"net/http"
+	"strconv"
 	"sync"
 	"text/template"
 
@@ -32,15 +34,16 @@ type Handler struct {
 }
 
 func init() {
-	buf := make([]byte, 128)
+	buf := make([]byte, 32)
 	_, err := rand.Read(buf)
 	if err != nil {
 		panic(fmt.Sprintf("error while generating random string: %s", err))
 	}
+	sessionKey = buf
 }
 
-func CreateSession(w http.ResponseWriter, ship, ticket string) {
-	session := &types.Session{Ship: ship, Ticket: ticket}
+func CreateSession(w http.ResponseWriter, ship, ticket string, point types.PointResp) {
+	session := &types.Session{Ship: ship, Ticket: ticket, Point: point}
 	encoded, err := securecookie.EncodeMulti("session", session,
 		securecookie.New(sessionKey, nil))
 	if err != nil {
@@ -51,7 +54,6 @@ func CreateSession(w http.ResponseWriter, ship, ticket string) {
 		Value:    encoded,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 	}
 	http.SetCookie(w, cookie)
@@ -164,7 +166,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleAuth(w, r)
 	case "/change-sponsor":
 		h.handleChangeSponsor(w, r)
-		// other routes
+	case "/download/wallet":
+		h.handleDownloadWallet(w, r)
+	case "/download/keyfile":
+		h.handleDownloadKeyfile(w, r)
 	}
 }
 
@@ -197,12 +202,8 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	CreateSession(w, ship, ticket)
-	data := struct {
-		Ship   string
-		Point  types.PointResp
-		Ticket string
-	}{
+	CreateSession(w, ship, ticket, point)
+	data := types.Session{
 		Ship:   ship,
 		Point:  point,
 		Ticket: ticket,
@@ -224,4 +225,59 @@ func (h *Handler) handleChangeSponsor(w http.ResponseWriter, r *http.Request) {
             <button type="submit">Update</button>
         </form>
     `))
+}
+
+func (h *Handler) handleDownloadWallet(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.Session
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	life, err := strconv.Atoi(session.Point.Point.Network.Keys.Life)
+	if err != nil {
+		http.Error(w, "Invalid life value", http.StatusUnauthorized)
+		return
+	}
+	wallet, err := libprg.Wallet(session.Ship, session.Ticket, "", life)
+	if err != nil {
+		http.Error(w, "Failed to generate wallet", http.StatusInternalServerError)
+		return
+	}
+	walletJSON, err := json.MarshalIndent(wallet, "", "  ")
+	if err != nil {
+		http.Error(w, "Failed to marshal wallet", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-wallet-%s.json", session.Ship, session.Point.Point.Network.Keys.Life))
+	w.Write(walletJSON)
+}
+
+func (h *Handler) handleDownloadKeyfile(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.Session
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+
+	keyfile, err := libprg.Keyfile(session.Ship, session.Ticket, "", 0)
+	if err != nil {
+		http.Error(w, "Failed to generate keyfile", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-%s.key", cleanPatp(session.Ship), session.Point.Point.Network.Keys.Life))
+	w.Write([]byte(keyfile))
 }

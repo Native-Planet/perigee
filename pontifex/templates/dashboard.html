@@ -70,7 +70,7 @@
     <div id="transfer-form"></div>
 
     <div class="action-box">
-        <h3>🔑 Network Configuration</h3>
+        <h3>🔑 Keys</h3>
 
         <div class="info-section">
             <span>Network Keys (Life: {{.Point.Network.Keys.Life}}, Rift: {{.Point.Network.Rift}})</span>
@@ -116,11 +116,11 @@
                     <button class="action-button warning" hx-post="/escape"
                         hx-confirm="Are you sure you want to initiate escape?">
                             Escape
-                        </button>
+                    </button>
                     <button class="action-button" hx-post="/cancel-escape"
                         hx-confirm="Cancel current escape?">
                             Cancel Escape
-                        </button>
+                    </button>
                 </div>
             </div>
             {{ end }}

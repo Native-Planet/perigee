@@ -19,6 +19,16 @@ type WalletResp struct {
 type PointResp struct {
 	Point    *Point `json:"point"`
 	PatpName string `json:"patp"`
+	Clan     string `json:"clan"`
+}
+
+func (p *PointResp) ResolveClan() error {
+	var err error
+	p.Clan, err = co.Clan(p.PatpName)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type BreachReq struct {
@@ -103,7 +113,6 @@ func ValidateAndNormalizePatp(patp string) (string, uint32, error) {
 	if err != nil {
 		return "", 0, fmt.Errorf("error normalizing patp: %v", err)
 	}
-
 	return ensureTildePrefix(validPatp), uint32(point.Uint64()), nil
 }
 

@@ -12,17 +12,21 @@
             <div class="sigil-container">
                 {{genSigil .PatpName 128}}
             </div>
-            <h2 class="ship-name">{{.PatpName}}</h2>
-            <div>
-                <span class="ship-dominion">
-                    <h3>{{.Point.Dominion}}</h3>
-                </span>
-            </div>
+            <table>
+                <tr><td>
+                    <h2 class="ship-name">{{.PatpName}}<a href="https://network.urbit.org/{{.PatpName}}" target="_blank">↗</a></h2>
+                </td></tr>
+                <tr><td>
+                    <span class="ship-dominion">
+                        <h4>{{.Point.Dominion}} {{.Clan}}</h4>
+                    </span>
+                </td></tr>
+            </table>
         </div>
         <div class="info-section">
             <div class="info-row">
                 <span>Owner</span>
-                <div class="address-display">{{.Point.Ownership.Owner.Address}}</div>
+                <div class="address-display">{{.Point.Ownership.Owner.Address}}<a href="https://etherscan.io/address/{{.Point.Ownership.Owner.Address}}" target="_blank">↗</a></div>
                 <button class="action-button warning" 
                         hx-post="/transfer/owner/form" 
                         hx-target="#transfer-form">
@@ -31,7 +35,7 @@
             </div>
             <div class="info-row">
                 <span>Management</span>
-                <div class="address-display">{{.Point.Ownership.ManagementProxy.Address}}</div>
+                <div class="address-display">{{.Point.Ownership.ManagementProxy.Address}}<a href="https://etherscan.io/address/{{.Point.Ownership.ManagementProxy.Address}}" target="_blank">↗</a></div>
                 <button class="action-button warning"
                         hx-post="/transfer/management/form"
                         hx-target="#transfer-form">
@@ -40,30 +44,21 @@
             </div>
             <div class="info-row">
                 <span>Transfer proxy</span>
-                <div class="address-display">{{.Point.Ownership.TransferProxy.Address}}</div>
+                <div class="address-display">{{.Point.Ownership.TransferProxy.Address}}{{if eq .Point.Ownership.TransferProxy.Address "0x0000000000000000000000000000000000000000"}} [L2]{{else}}<a href="https://etherscan.io/address/{{.Point.Ownership.TransferProxy.Address}}" target="_blank">↗</a>{{end}}</div>
+                {{ if eq .Point.Dominion "l1"}}
                 <button class="action-button warning"
                         hx-post="/transfer/transfer-proxy/form"
                         hx-target="#transfer-form">
                     Transfer
                 </button>
+                {{end}}
             </div>
             {{if lt (.PatpName | len) 12}}
             <div class="info-row">
                 <span>Spawn proxy</span>
-                <div class="address-display">{{.Point.Ownership.SpawnProxy.Address}}</div>
+                <div class="address-display">{{.Point.Ownership.SpawnProxy.Address}}<a href="https://etherscan.io/address/{{.Point.Ownership.SpawnProxy.Address}}" target="_blank">↗</a></div>
                 <button class="action-button warning"
                         hx-post="/transfer/spawn-proxy/form"
-                        hx-target="#transfer-form">
-                    Transfer
-                </button>
-            </div>
-		    {{end}}
-            {{if lt (.PatpName | len) 6}}
-            <div class="info-row">
-                <span>Voting proxy</span>
-                <div class="address-display">{{.Point.Ownership.VotingProxy.Address}}</div>
-                <button class="action-button warning"
-                        hx-post="/transfer/voting-proxy/form"
                         hx-target="#transfer-form">
                     Transfer
                 </button>
@@ -88,18 +83,19 @@
         <div class="info-section">
             <span>Network Keys (Life: {{.Point.Network.Keys.Life}}, Rift: {{.Point.Network.Rift}})</span>
             <div class="key-row">
-                <span>Authentication:</span>
+                <span>Authentication</span>
                 <div class="address-display">{{.Point.Network.Keys.Auth}}</div>
             </div>
             
             <div class="key-row">
-                <span>Encryption:</span>
+                <span>Encryption</span>
                 <div class="address-display">{{.Point.Network.Keys.Crypt}}</div>
             </div>
             <div class="centered">
                 <form method="post" action="/breach" style="display: inline;">
                     <button type="submit" 
                             class="action-button warning"
+                            perma-button-id="breach"
                             onclick="return confirm('Are you sure you want to breach network keys?')">
                         Breach
                     </button>
@@ -119,7 +115,8 @@
                 <div class="sponsor-info">
                     <div class="sponsor-text">
                         <span>Sponsor:</span>
-                        <span class="monospace">{{.Point.Network.Sponsor.Patp}}</span>
+                        <span class="monospace">
+                            {{.Point.Network.Sponsor.Patp}}<a href="https://network.urbit.org/{{.Point.Network.Sponsor.Patp}}" target="_blank">↗</a></span>
                     </div>
                     <div class="sponsor-sigil">
                         {{genSigil .Point.Network.Sponsor.Patp 64}}
@@ -148,4 +145,4 @@
     {{end}}
 </div>
 
-{{end}}
+{{end}}Ó

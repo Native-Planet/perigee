@@ -10,13 +10,14 @@
                     <input type="text" 
                            id="address" 
                            name="address" 
+                           data-button-id="transfer-{{.Type}}"
                            class="address-display"
                            placeholder="0x..."
                            required>
                 </div>
             </div>
             <div class="transfer-buttons">
-                <button type="submit" class="action-button warning">
+                <button type="submit" class="perma-button warning">
                     Confirm Transfer
                 </button>
                 <button type="button" 

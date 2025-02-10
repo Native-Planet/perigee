@@ -47,6 +47,11 @@ body {
     margin: 0 10px;
 }
 
+a {
+    color: #340cd3;
+    text-decoration: none;
+}
+
 .nav a:hover {
     text-decoration: underline;
 }
@@ -194,7 +199,7 @@ font-family: "Courier New", Courier, monospace;
     padding: 0 20px;
 }
 
-.action-button {
+.action-button, .perma-button {
     background: #c0c0c0;
     color: #000;
     border: 2px outset #fff;
@@ -209,19 +214,41 @@ font-family: "Courier New", Courier, monospace;
     margin: 4px;
     width: 100%;
     padding: 4px 8px;
+    transition: opacity 0.2s ease-in-out;
 }
 
-.action-button:active {
+.action-button.disabled {
+    background: #a0a0a0;
+    color: #666;
+    border: 2px solid #888;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.action-button.disabled:active, .perma-button.disabled:active {
+    border-style: solid;
+    transform: none;
+}
+
+.action-button.warning.disabled, .perma-button.warning.disabled {
+    background: #b0b0b0;
+    color: #666;
+    font-weight: normal;
+}
+
+.action-button:active, .perma-button:active {
     border-style: inset;
     background: #b0b0b0;
     transform: translateX(1px) translateY(1px);
 }
 
-.action-button:hover {
+.action-button:hover, .perma-button:hover {
     background: #d0d0d0;
 }
 
-.action-button.warning {
+.action-button.warning, .perma-button.warning {
     background: #c0c0c0;
     color: #800000;
     font-weight: bold;
@@ -318,6 +345,17 @@ font-family: "Courier New", Courier, monospace;
     font-family: "Courier New", Courier, monospace;
 }
 
+.error-box {
+    background: #c0c0c0;
+    color: #800000;
+    border: 2px inset #fff;
+    font-weight: bold;
+    width: 100%;
+    padding: 8px;
+    font-family: "Courier New", monospace;
+    text-align: center;
+}
+
 .warning {
     color: #800000;
     font-weight: bold;
@@ -355,8 +393,6 @@ font-family: "Courier New", Courier, monospace;
 .ship-dominion {
     font-size: 18px;
     color: #000080;
-    padding: 5px 5px;;
-    margin: 0px 0;
     text-transform: capitalize;
     font-family: "Courier New", monospace;
 }
@@ -487,4 +523,49 @@ font-family: "Courier New", Courier, monospace;
     margin-bottom: 15px;
     font-family: "Courier New", monospace;
 }
- 
+
+.error-message {
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.status-box.warning {
+    background: #c0c0c0;
+    color: #800000;
+    border: 2px inset #fff;
+    padding: 8px;
+    font-family: "Courier New", monospace;
+    text-align: center;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-family: "Courier New", monospace;
+    color: #000080;
+}
+
+.checkbox-container input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 2px inset #fff;
+    background: #fff;
+    position: relative;
+    cursor: pointer;
+}
+
+.checkbox-container input[type="checkbox"]:checked {
+    background: #000080;
+}
+
+.checkbox-container input[type="checkbox"]:checked::after {
+    content: '✓';
+    color: white;
+    position: absolute;
+    left: 2px;
+    top: -2px;
+}

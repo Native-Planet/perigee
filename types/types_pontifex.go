@@ -1,20 +1,20 @@
 package types
 
-type Session struct {
+type PxSession struct {
 	Ship       string
 	Ticket     string
 	Passphrase string
 	Point      PointResp
 }
 
-type SigilConfig struct {
+type PxSigilConfig struct {
 	Patp       string
 	Size       int
 	Background string
 	Foreground string
 }
 
-type SvgConfig struct {
+type PxSvgConfig struct {
 	Point      string
 	Background string
 	Foreground string
@@ -25,4 +25,13 @@ type SvgConfig struct {
 
 type SvgSymbol struct {
 	SVG string
+}
+
+type PxTransferFormData struct {
+	Type string
+}
+
+type PxTransferRequest struct {
+	TransferType string `json:"transfer_type"`
+	Address      string `json:"address"`
 }

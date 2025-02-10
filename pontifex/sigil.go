@@ -15,8 +15,8 @@ const (
 	DetailDefault string = "default"
 )
 
-func DefaultConfig() types.SvgConfig {
-	return types.SvgConfig{
+func DefaultConfig() types.PxSvgConfig {
+	return types.PxSvgConfig{
 		Size:       128,
 		Background: "#000",
 		Foreground: "#FFF",
@@ -107,7 +107,7 @@ func calculateGroupTransform(size int, phonemeCount int, space string) string {
 	}
 }
 
-func GenerateSigil(cfg types.SvgConfig) (string, error) {
+func GenerateSigil(cfg types.PxSvgConfig) (string, error) {
 	if cfg.Point == "" {
 		return "", fmt.Errorf("point must be provided")
 	}

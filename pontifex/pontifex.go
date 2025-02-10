@@ -16,6 +16,7 @@ import (
 	"github.com/Native-Planet/perigee/libprg"
 	"github.com/Native-Planet/perigee/types"
 
+	"github.com/deelawn/urbit-gob/co"
 	"github.com/gorilla/securecookie"
 )
 
@@ -44,7 +45,7 @@ func init() {
 }
 
 func CreateSession(w http.ResponseWriter, ship, ticket string, point types.PointResp) {
-	session := &types.Session{Ship: ship, Ticket: ticket, Point: point}
+	session := &types.PxSession{Ship: ship, Ticket: ticket, Point: point}
 	encoded, err := securecookie.EncodeMulti("session", session,
 		securecookie.New(sessionKey, nil))
 	if err != nil {
@@ -64,7 +65,7 @@ func GetTemplateFuncs() template.FuncMap {
 	funcMapOnce.Do(func() {
 		funcMap = template.FuncMap{
 			"genSigil": func(patp string, size int) string {
-				svg, err := GenerateSigil(types.SvgConfig{
+				svg, err := GenerateSigil(types.PxSvgConfig{
 					Point: patp,
 					Size:  size,
 				})
@@ -74,7 +75,7 @@ func GetTemplateFuncs() template.FuncMap {
 				return svg
 			},
 			"smallSigil": func(patp string) string {
-				svg, err := GenerateSigil(types.SvgConfig{
+				svg, err := GenerateSigil(types.PxSvgConfig{
 					Point: patp,
 					Size:  32,
 				})
@@ -84,7 +85,7 @@ func GetTemplateFuncs() template.FuncMap {
 				return svg
 			},
 			"largeSigil": func(patp string) string {
-				svg, err := GenerateSigil(types.SvgConfig{
+				svg, err := GenerateSigil(types.PxSvgConfig{
 					Point: patp,
 					Size:  256,
 				})
@@ -102,7 +103,7 @@ func setupTemplates() (*template.Template, error) {
 	tmpl := template.New("")
 	tmpl = tmpl.Funcs(template.FuncMap{
 		"genSigil": func(patp string, size int) string {
-			svg, err := GenerateSigil(types.SvgConfig{
+			svg, err := GenerateSigil(types.PxSvgConfig{
 				Point: patp,
 				Size:  size,
 			})
@@ -112,7 +113,7 @@ func setupTemplates() (*template.Template, error) {
 			return svg
 		},
 		"smallSigil": func(patp string) string {
-			svg, err := GenerateSigil(types.SvgConfig{
+			svg, err := GenerateSigil(types.PxSvgConfig{
 				Point: patp,
 				Size:  32,
 			})
@@ -122,7 +123,7 @@ func setupTemplates() (*template.Template, error) {
 			return svg
 		},
 		"largeSigil": func(patp string) string {
-			svg, err := GenerateSigil(types.SvgConfig{
+			svg, err := GenerateSigil(types.PxSvgConfig{
 				Point: patp,
 				Size:  256,
 			})
@@ -197,47 +198,72 @@ func (h *Handler) handleRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
 	if r.Method != http.MethodPost {
-		fmt.Printf("Wrong method: %s\n", r.Method)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		h.tmpl.ExecuteTemplate(w, "login-error", "Method not allowed")
 		return
 	}
-
 	if err := r.ParseForm(); err != nil {
-		fmt.Printf("Form parse error: %v\n", err)
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Invalid form data: %v", err))
 		return
 	}
-
 	ship := r.FormValue("ship")
 	ticket := r.FormValue("ticket")
-
-	fmt.Printf("Auth attempt - Ship: '%s', Ticket length: %d\n", ship, len(ticket))
-
-	point, err := libprg.Point(ship)
-	if err != nil {
-		fmt.Printf("Point retrieval error: %v\n", err)
-		http.Error(w, fmt.Sprintf("Error retrieving point info: %v", err), http.StatusUnauthorized)
+	passphrase := r.FormValue("passphrase")
+	patq := ticket
+	if !strings.HasPrefix(ticket, "~") {
+		patq = "~" + ticket
+	}
+	if len(strings.TrimPrefix(ticket, "~")) < 27 {
+		w.WriteHeader(http.StatusBadRequest)
+		h.tmpl.ExecuteTemplate(w, "login-error", "Ticket content is not long enough")
 		return
 	}
-
-	CreateSession(w, ship, ticket, point)
-	data := types.Session{
-		Ship:   ship,
-		Point:  point,
-		Ticket: ticket,
+	if !co.IsValidPatq(patq) {
+		w.WriteHeader(http.StatusBadRequest)
+		h.tmpl.ExecuteTemplate(w, "login-error", "Invalid ticket text (not valid @q)")
+		return
 	}
-
-	w.Header().Set("Content-Type", "text/html")
+	point, err := libprg.Point(ship)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error retrieving point info: %v", err))
+		return
+	}
+	life, err := strconv.Atoi(point.Point.Network.Keys.Life)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error evaluating point life: %v", err))
+		return
+	}
+	wallet, err := libprg.Wallet(ship, ticket, passphrase, life)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error generating wallet: %v", err))
+		return
+	}
+	if !strings.EqualFold(wallet.Ownership.Keys.Address, point.Point.Ownership.Owner.Address) {
+		w.WriteHeader(http.StatusUnauthorized)
+		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Seeded address %s doesn't match %s point owner %s", wallet.Ownership.Keys.Address, point.PatpName, point.Point.Ownership.Owner.Address))
+		return
+	}
+	CreateSession(w, ship, ticket, point)
+	data := types.PxSession{
+		Ship:       ship,
+		Point:      point,
+		Ticket:     ticket,
+		Passphrase: passphrase,
+	}
 	if err := h.tmpl.ExecuteTemplate(w, "dashboard-content", data); err != nil {
-		fmt.Printf("Template execution error: %v\n", err)
-		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Template error: %v", err))
 		return
 	}
 }
 
 func (h *Handler) handleChangeSponsor(w http.ResponseWriter, r *http.Request) {
-	// Return a form for changing sponsor
 	w.Write([]byte(`
         <form hx-post="/update-sponsor" hx-target="closest .info-row">
             <input type="text" name="sponsor" placeholder="~new-sponsor">
@@ -252,7 +278,7 @@ func (h *Handler) handleDownloadWallet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No session found", http.StatusUnauthorized)
 		return
 	}
-	var session types.Session
+	var session types.PxSession
 	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
 		securecookie.New(sessionKey, nil)); err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
@@ -291,7 +317,7 @@ func (h *Handler) handleDownloadKeyfile(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "No session found", http.StatusUnauthorized)
 		return
 	}
-	var session types.Session
+	var session types.PxSession
 	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
 		securecookie.New(sessionKey, nil)); err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
@@ -318,7 +344,7 @@ func (h *Handler) handleBreach(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No session found", http.StatusUnauthorized)
 		return
 	}
-	var session types.Session
+	var session types.PxSession
 	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
 		securecookie.New(sessionKey, nil)); err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
@@ -335,20 +361,9 @@ func (h *Handler) handleBreach(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(nfoContent))
 }
 
-// Add these new types to your types package
-type TransferFormData struct {
-	Type string
-}
-
-type TransferRequest struct {
-	TransferType string `json:"transfer_type"`
-	Address      string `json:"address"`
-}
-
-// Add these new handler functions to your Handler struct
 func (h *Handler) handleTransferForm(w http.ResponseWriter, r *http.Request) {
 	transferType := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/transfer/"), "/form")
-	data := TransferFormData{
+	data := types.PxTransferFormData{
 		Type: transferType,
 	}
 
@@ -368,7 +383,7 @@ func (h *Handler) handleTransferSubmit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No session found", http.StatusUnauthorized)
 		return
 	}
-	var session types.Session
+	var session types.PxSession
 	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
 		securecookie.New(sessionKey, nil)); err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
@@ -438,7 +453,7 @@ func (h *Handler) handleEscape(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No session found", http.StatusUnauthorized)
 		return
 	}
-	var session types.Session
+	var session types.PxSession
 	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
 		securecookie.New(sessionKey, nil)); err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
@@ -467,7 +482,7 @@ func (h *Handler) handleCancelEscape(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No session found", http.StatusUnauthorized)
 		return
 	}
-	var session types.Session
+	var session types.PxSession
 	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
 		securecookie.New(sessionKey, nil)); err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
@@ -505,7 +520,7 @@ func (h *Handler) handleAdopt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No session found", http.StatusUnauthorized)
 		return
 	}
-	var session types.Session
+	var session types.PxSession
 	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
 		securecookie.New(sessionKey, nil)); err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)

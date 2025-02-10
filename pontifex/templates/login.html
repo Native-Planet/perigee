@@ -10,6 +10,7 @@
     </span>
     <form class="login-form" 
           hx-post="/auth" 
+          hx-target-error="#login-error"
           hx-target="#main-content">
         <div class="form-group">
             <label for="ship">SHIP NAME</label>
@@ -28,7 +29,24 @@
                    required>
         </div>
 
-        <button type="submit">Submit</button>
+        <div class="form-group">
+            <label class="checkbox-container">
+                <input type="checkbox" 
+                       id="use-passphrase"
+                       onclick="document.getElementById('passphrase-section').style.display = this.checked ? 'block' : 'none'">
+                Use passphrase
+            </label>
+            <div id="passphrase-section" class="form-group" style="display: none">
+                <input type="password" 
+                       id="passphrase" 
+                       name="passphrase"
+                       placeholder="Optional passphrase">
+            </div>
+        </div>
+        <div class="centered">
+            <button class="action-button" type="submit">Submit</button>
+            <div id="login-error"></div>
+        </div>
 
         <div class="status">
             <span class="centered">

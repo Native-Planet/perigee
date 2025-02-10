@@ -228,6 +228,9 @@ func Point(point string) (types.PointResp, error) {
 	if err := resp.Point.ResolveSponsorPatp(); err != nil {
 		return types.PointResp{}, fmt.Errorf("invalid sponsor point: %v", err)
 	}
+	if err := resp.ResolveClan(); err != nil {
+		return types.PointResp{}, fmt.Errorf("invalid point clan: %v", err)
+	}
 	return resp, nil
 }
 

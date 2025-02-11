@@ -814,6 +814,18 @@ func ValidateKey(point, input, passphrase, seed string, genkey bool) (*ecdsa.Pri
 		authType = "ticket"
 		derivedPubkey = wallet.Ownership.Keys.Address
 		ownerPubkey = pointInfo.Ownership.Owner.Address
+		if genkey {
+			networkKeys = types.NetworkKeys{
+				Crypt: types.KeyPair{
+					Private: wallet.Network.Keys.Crypt.Private,
+					Public:  wallet.Network.Keys.Crypt.Public,
+				},
+				Auth: types.KeyPair{
+					Private: wallet.Network.Keys.Auth.Private,
+					Public:  wallet.Network.Keys.Auth.Public,
+				},
+			}
+		}
 	} else if len(input) > 63 {
 		pResp, err := Point(point)
 		pointInfo = pResp.Point

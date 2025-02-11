@@ -110,17 +110,28 @@
         <h3>👪 Sponsorship</h3>
         
         <div class="info-section">
-            {{ if .Point.Network.Sponsor.Has }}
             <div class="sponsor-section">
                 <div class="sponsor-info">
+                    {{ if .Point.Network.Sponsor.Has }}
                     <div class="sponsor-text">
                         <span>Sponsor:</span>
                         <span class="monospace">
-                            {{.Point.Network.Sponsor.Patp}}<a href="https://network.urbit.org/{{.Point.Network.Sponsor.Patp}}" target="_blank">↗</a></span>
+                            {{.Point.Network.Sponsor.Patp}}<a href="https://network.urbit.org/{{.Point.Network.Sponsor.Patp}}" target="_blank">↗</span>
                     </div>
                     <div class="sponsor-sigil">
                         {{genSigil .Point.Network.Sponsor.Patp 64}}
+                    </div></a>
+                    {{ end }}
+                    {{ if .Point.Network.Sein.Has }}
+                    <div class="sponsor-text">
+                        <span>Parent:</span>
+                        <span class="monospace">
+                            {{.Point.Network.Sein.Patp}}<a href="https://network.urbit.org/{{.Point.Network.Sein.Patp}}" target="_blank">↗</span>
                     </div>
+                    <div class="sponsor-sigil">
+                        {{genSigil .Point.Network.Sein.Patp 64}}
+                    </div></a>
+                    {{ end }}
                 </div>
                 <div class="sponsor-buttons">
                     <button class="action-button warning" 
@@ -137,7 +148,6 @@
                     </form>
                 </div>
             </div>
-            {{ end }}
         </div>
     </div>
 

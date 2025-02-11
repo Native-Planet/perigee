@@ -31,6 +31,27 @@ func (p *PointResp) ResolveClan() error {
 	return nil
 }
 
+func (p *PointResp) ResolveSein() error {
+	if err := p.ResolveClan(); err != nil {
+		return err
+	}
+	if p.Clan == "galaxy" {
+		return nil
+	}
+	p.Point.Network.Sein.Has = true
+	patp, err := co.Sein(p.PatpName)
+	if err != nil {
+		return err
+	}
+	whoStr, err := co.Patp2Dec(patp)
+	if err != nil {
+		return err
+	}
+	p.Point.Network.Sein.Patp = patp
+	p.Point.Network.Sein.Who = whoStr
+	return nil
+}
+
 type BreachReq struct {
 	Point      json.RawMessage `json:"point"`
 	Ticket     string          `json:"ticket"`

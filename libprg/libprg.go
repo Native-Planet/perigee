@@ -249,6 +249,9 @@ func Point(point string) (types.PointResp, error) {
 	if err := resp.ResolveClan(); err != nil {
 		return types.PointResp{}, fmt.Errorf("invalid point clan: %v", err)
 	}
+	if err := resp.ResolveSein(); err != nil {
+		return types.PointResp{}, fmt.Errorf("invalid point sein: %v", err)
+	}
 	return resp, nil
 }
 

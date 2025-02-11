@@ -44,8 +44,8 @@ func init() {
 	sessionKey = buf
 }
 
-func CreateSession(w http.ResponseWriter, ship, ticket string, point types.PointResp) {
-	session := &types.PxSession{Ship: ship, Ticket: ticket, Point: point}
+func CreateSession(w http.ResponseWriter, ship, ticket string, point types.PointResp, authType string) {
+	session := &types.PxSession{Ship: ship, Ticket: ticket, Point: point, AuthType: authType}
 	encoded, err := securecookie.EncodeMulti("session", session,
 		securecookie.New(sessionKey, nil))
 	if err != nil {
@@ -172,6 +172,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleDownloadWallet(w, r)
 	case "/download/keyfile":
 		h.handleDownloadKeyfile(w, r)
+	case "/breach/form":
+		h.handleBreachForm(w, r)
 	case "/breach":
 		h.handleBreach(w, r)
 	case "/transfer/owner/form", "/transfer/management/form", "/transfer/transfer-proxy/form",
@@ -224,7 +226,7 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		h.tmpl.ExecuteTemplate(w, "login-error", err)
 		return
 	}
-	CreateSession(w, ship, ticket, point)
+	CreateSession(w, ship, ticket, point, authType)
 	data := types.PxSession{
 		Ship:       ship,
 		Point:      point,
@@ -308,6 +310,31 @@ func (h *Handler) handleDownloadKeyfile(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-%s.key", strings.TrimPrefix(session.Ship, "~"), session.Point.Point.Network.Keys.Life))
 	w.Write([]byte(keyfile))
+}
+
+func (h *Handler) handleBreachForm(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.PxSession
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	data := struct {
+		Point    types.PointResp
+		AuthType string
+	}{
+		Point:    session.Point,
+		AuthType: session.AuthType,
+	}
+	if err := h.tmpl.ExecuteTemplate(w, "breach-form", data); err != nil {
+		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) handleBreach(w http.ResponseWriter, r *http.Request) {

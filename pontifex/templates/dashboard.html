@@ -63,8 +63,9 @@
                     Transfer
                 </button>
             </div>
-		    {{end}}
+		    {{ end }}
         </div>
+        {{if eq $.AuthType "ticket" }}
         <div class="download-section">
             <form method="post" action="/download/wallet" style="display: inline;">
                 <button class="action-button" type="submit">Download wallet</button>
@@ -73,6 +74,7 @@
                 <button class="action-button" type="submit">Download keyfile</button>
             </form>
         </div>
+        {{ end}}
     </div>
 
     <div id="transfer-form"></div>
@@ -92,14 +94,12 @@
                 <div class="address-display">{{.Point.Network.Keys.Crypt}}</div>
             </div>
             <div class="centered">
-                <form method="post" action="/breach" style="display: inline;">
-                    <button type="submit" 
-                            class="action-button warning"
-                            perma-button-id="breach"
-                            onclick="return confirm('Are you sure you want to breach network keys?')">
-                        Breach
-                    </button>
-                </form>
+                <button type="submit" 
+                        class="action-button warning"
+                        hx-post="/breach/form"
+                        hx-target="#breach-form">
+                    Breach
+                </button>
             </div>
         </div>
     </div>
@@ -145,4 +145,4 @@
     {{end}}
 </div>
 
-{{end}}Ó
+{{end}}

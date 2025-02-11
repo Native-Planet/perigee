@@ -293,13 +293,13 @@ font-family: "Courier New", Courier, monospace;
  }
 
 .key-row span {
-    min-width: 120px;
+    min-width: 60px;
 }
 
-.key-row .address-display {
+.key-row .address-display{
     flex: 1;
     font-size: 12px;
-    overflow-x: auto;
+    overflow-x: scroll;
     white-space: nowrap;
 }
 
@@ -471,10 +471,10 @@ font-family: "Courier New", Courier, monospace;
     margin: 0;
  }
 
- .transfer-form {
+.transfer-form {
     width: 100%;
     font-family: "Courier New", Courier, monospace;
-}
+    }
 
 .transfer-form .info-row {
     margin: 15px 0;
@@ -506,12 +506,40 @@ font-family: "Courier New", Courier, monospace;
     padding: 10px;
 }
 
-.transfer-buttons .action-button {
+.transfer-form, .breach-form {
+    width: 100%;
+    font-family: "Courier New", Courier, monospace;
+}
+
+.transfer-form .info-row, .breach-form .info-row {
+    margin: 15px 0;
+}
+
+.transfer-form .address-input-container, .breach-form .address-input-container {
+    grid-column: span 2;
+    max-width: 75%;
+}
+
+.transfer-form input[type="text"], .breach-form input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 2px inset #fff;
+    background: white;
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    color: #000080;
+}
+
+.transfer-form input[type="text"]::placeholder, .breach-form input[type="text"]::placeholder {
+    color: #808080;
+}
+
+.transfer-buttons .action-button, .breach-form-buttons .action-button {
     min-width: 150px;
     margin: 0;
 }
 
-.transfer-success {
+.transfer-success, .breach-success {
     background: #d4d0c8;
     border: 2px outset #fff;
     padding: 15px;
@@ -519,7 +547,7 @@ font-family: "Courier New", Courier, monospace;
     color: #000080;
 }
 
-.transfer-success p {
+.transfer-success p, .breach-success p {
     margin-bottom: 15px;
     font-family: "Courier New", monospace;
 }

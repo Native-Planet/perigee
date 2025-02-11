@@ -1,0 +1,35 @@
+{{define "breach-form"}}
+{{with $}}
+<div class="action-box">
+    <h3>Breach and set networking keys</h3>
+    <div class="info-section">
+        <form method="post" action="/breach" class="breach-form">
+            {{ if ne $.AuthType "ticket" }}
+            <div class="key-row">
+                <span>Seed must be provided if no master ticket</span>
+                <div class="address-input-container">
+                    <input type="text" 
+                            id="seed" 
+                            name="seed"
+                            data-button-id="seed"
+                            class="address-display"
+                            placeholder="(authtype {{.AuthType}}) hexdump -n 32 -e '4/4 &quot;%08X&quot;' /dev/random"
+                            required>
+                </div>
+            </div>
+            {{ end }}
+            <div class="breach-buttons">
+                <button type="submit" class="perma-button warning">
+                    Confirm breach
+                </button>
+                <button type="button" 
+                        class="action-button"
+                        onclick="this.closest('.action-box').remove()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
+{{end}}

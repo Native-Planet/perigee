@@ -5,6 +5,7 @@ type PxSession struct {
 	Ticket     string
 	Passphrase string
 	Point      PointResp
+	AuthType   string
 }
 
 type PxSigilConfig struct {

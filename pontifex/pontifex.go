@@ -8,6 +8,7 @@ import (
 	html "html/template"
 	"io/fs"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,7 +17,6 @@ import (
 	"github.com/Native-Planet/perigee/libprg"
 	"github.com/Native-Planet/perigee/types"
 
-	"github.com/deelawn/urbit-gob/co"
 	"github.com/gorilla/securecookie"
 )
 
@@ -212,41 +212,16 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 	ship := r.FormValue("ship")
 	ticket := r.FormValue("ticket")
 	passphrase := r.FormValue("passphrase")
-	patq := ticket
-	if !strings.HasPrefix(ticket, "~") {
-		patq = "~" + ticket
-	}
-	if len(strings.TrimPrefix(ticket, "~")) < 27 {
-		w.WriteHeader(http.StatusBadRequest)
-		h.tmpl.ExecuteTemplate(w, "login-error", "Ticket content is not long enough")
-		return
-	}
-	if !co.IsValidPatq(patq) {
-		w.WriteHeader(http.StatusBadRequest)
-		h.tmpl.ExecuteTemplate(w, "login-error", "Invalid ticket text (not valid @q)")
-		return
-	}
 	point, err := libprg.Point(ship)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error retrieving point info: %v", err))
 		return
 	}
-	life, err := strconv.Atoi(point.Point.Network.Keys.Life)
+	_, _, _, _, authType, err := libprg.ValidateKey(ship, ticket, passphrase, "", false)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error evaluating point life: %v", err))
-		return
-	}
-	wallet, err := libprg.Wallet(ship, ticket, passphrase, life)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error generating wallet: %v", err))
-		return
-	}
-	if !strings.EqualFold(wallet.Ownership.Keys.Address, point.Point.Ownership.Owner.Address) {
-		w.WriteHeader(http.StatusUnauthorized)
-		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Seeded address %s doesn't match %s point owner %s", wallet.Ownership.Keys.Address, point.PatpName, point.Point.Ownership.Owner.Address))
+		h.tmpl.ExecuteTemplate(w, "login-error", err)
 		return
 	}
 	CreateSession(w, ship, ticket, point)
@@ -255,6 +230,7 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		Point:      point,
 		Ticket:     ticket,
 		Passphrase: passphrase,
+		AuthType:   authType,
 	}
 	if err := h.tmpl.ExecuteTemplate(w, "dashboard-content", data); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -335,6 +311,7 @@ func (h *Handler) handleDownloadKeyfile(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) handleBreach(w http.ResponseWriter, r *http.Request) {
+	var seed string
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -350,7 +327,19 @@ func (h *Handler) handleBreach(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
 		return
 	}
-	receipt, err := libprg.Breach(session.Ship, session.Ticket, session.Passphrase)
+	if session.AuthType != "ticket" {
+		seed = r.FormValue("seed")
+		if seed == "" {
+			http.Error(w, "Must provide a seed if not authenticating with master ticket", http.StatusBadRequest)
+			return
+		}
+		isHex, err := regexp.MatchString("^[0-9a-fA-F]{64}$", seed)
+		if err != nil || !isHex {
+			http.Error(w, "Invalid hex seed", http.StatusBadRequest)
+			return
+		}
+	}
+	receipt, err := libprg.Breach(session.Ship, session.Ticket, session.Passphrase, seed)
 	if err != nil {
 		http.Error(w, "Failed to breach network keys", http.StatusInternalServerError)
 		return

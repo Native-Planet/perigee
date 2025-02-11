@@ -57,6 +57,11 @@ type Point struct {
 			Who  int    `json:"who"`
 			Patp string `json:"patp"`
 		} `json:"sponsor"`
+		Sein struct {
+			Has  bool   `json:"has"`
+			Who  string `json:"who"`
+			Patp string `json:"patp"`
+		} `json:"sein"`
 		Rift string `json:"rift"`
 	} `json:"network"`
 }

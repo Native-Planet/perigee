@@ -409,37 +409,25 @@ font-family: "Courier New", Courier, monospace;
 
 .sponsor-info {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     padding: 20px 0;
+    gap: 20px;
+}
+
+.sponsor-section {
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
 }
 
 .sponsor-text {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
+    align-items: center;
+    gap: 8px;
 }
-
-.sponsor-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    padding: 20px;
- }
- 
- .sponsor-info {
-    display: flex;
-    align-items: center;
-    gap: 20px;
- }
- 
- .sponsor-text {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
- }
  
  .sponsor-buttons {
     display: flex;

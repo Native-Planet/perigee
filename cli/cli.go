@@ -75,6 +75,10 @@ var ModBreachCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("error getting master-ticket flag: %v", err)
 		}
+		seed, err := cmd.Flags().GetString("seed")
+		if err != nil {
+			return fmt.Errorf("error getting seed flag: %v", err)
+		}
 		if masterTicket == "" {
 			if !cmd.Flags().Changed("private-key") {
 				return fmt.Errorf("master-ticket is required")
@@ -84,13 +88,16 @@ var ModBreachCmd = &cobra.Command{
 					return fmt.Errorf("error getting private-key flag: %v", err)
 				}
 				masterTicket = ethKey
+				if seed == "" {
+					return fmt.Errorf("must provide a new network key seed when using private key")
+				}
 			}
 		}
 		passphrase, err := cmd.Flags().GetString("passphrase")
 		if err != nil {
 			return fmt.Errorf("error getting passphrase flag: %v", err)
 		}
-		keysTx, err := libprg.Breach(point, masterTicket, passphrase)
+		keysTx, err := libprg.Breach(point, masterTicket, passphrase, seed)
 		if err != nil {
 			return fmt.Errorf("error processing breach: %v", err)
 		}

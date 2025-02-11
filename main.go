@@ -53,6 +53,7 @@ func init() {
 	cli.ModBreachCmd.Flags().String("point", "", "Point for breach")
 	cli.ModBreachCmd.Flags().String("master-ticket", "", "Master ticket for wallet generation")
 	cli.ModBreachCmd.Flags().String("passphrase", "", "Passphrase for wallet")
+	cli.ModBreachCmd.Flags().String("seed", "", "64 character hex seed for network keys (only necessary if using eth private key to breach)")
 	cli.ModBreachCmd.Flags().Duration("wait", 0, "Wait until breach processes (forever if no value, or specific time like '70m' or '1h20m')")
 
 	cli.ModEscapeCmd.Flags().String("point", "", "Escaping point")

@@ -174,7 +174,7 @@ button {
 }
 
 .monospace {
-font-family: "Courier New", Courier, monospace;
+    font-family: "Courier New", Courier, monospace;
 }
 
 .action-box {
@@ -203,7 +203,6 @@ font-family: "Courier New", Courier, monospace;
     background: #c0c0c0;
     color: #000;
     border: 2px outset #fff;
-    padding: 2px 6px;
     cursor: pointer;
     font-family: "Courier New", Courier, monospace;
     font-size: 14px;
@@ -313,23 +312,6 @@ font-family: "Courier New", Courier, monospace;
     white-space: nowrap;
 }
 
-
-
-.action-box {
-    border: 2px solid #000080;
-    margin: 15px 0;
-    padding: 15px;
-    background: #c0c0c0;
-}
-
-.action-box h3 {
-    margin: -15px -15px 15px -15px;
-    padding: 5px 15px;
-    background: #000080;
-    color: #fff;
-    font-size: 14px;
-}
-
 .action-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -417,6 +399,8 @@ font-family: "Courier New", Courier, monospace;
 }
 
 .sponsor-section {
+    display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 20px;
     padding: 20px;

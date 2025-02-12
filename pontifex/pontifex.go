@@ -17,6 +17,8 @@ import (
 	"github.com/Native-Planet/perigee/libprg"
 	"github.com/Native-Planet/perigee/types"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/securecookie"
 )
 
@@ -164,6 +166,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/":
 		h.handleRoot(w, r)
+	case "/auth/key-form":
+		h.tmpl.ExecuteTemplate(w, "key-form", nil)
+	case "/auth/hardware-form":
+		h.tmpl.ExecuteTemplate(w, "hardware-form", nil)
+	case "/auth/challenge":
+		h.handleAuthChallenge(w, r)
 	case "/auth":
 		h.handleAuth(w, r)
 	case "/change-sponsor":
@@ -210,39 +218,77 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		h.tmpl.ExecuteTemplate(w, "login-error", "Method not allowed")
 		return
 	}
+
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Invalid form data: %v", err))
 		return
 	}
+
 	ship := r.FormValue("ship")
-	ticket := r.FormValue("ticket")
-	passphrase := r.FormValue("passphrase")
+	authType := r.FormValue("auth_type")
+
 	point, err := libprg.Point(ship)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error retrieving point info: %v", err))
 		return
 	}
-	_, _, _, _, authType, err := libprg.ValidateKey(ship, ticket, passphrase, "", false)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		h.tmpl.ExecuteTemplate(w, "login-error", err)
-		return
+	var ticket string
+	var validAuthType string
+	var wallet types.WalletData
+	if authType == "hardware" {
+		address := r.FormValue("address")
+		signature := r.FormValue("signature")
+		challenge := r.FormValue("challenge")
+		if !verifySignature(address, signature, challenge) {
+			w.WriteHeader(http.StatusUnauthorized)
+			h.tmpl.ExecuteTemplate(w, "login-error", "Invalid signature")
+			return
+		}
+		validAuthType = "hardware"
+		wallet = types.WalletData{Address: address}
+	} else {
+		ticket = r.FormValue("ticket")
+		passphrase := r.FormValue("passphrase")
+		_, pubkey, _, _, authType, err := libprg.ValidateKey(ship, ticket, passphrase, "", false)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			h.tmpl.ExecuteTemplate(w, "login-error", err)
+			return
+		}
+		validAuthType = authType
+		wallet = types.WalletData{Address: fmt.Sprintf("0x%s", pubkey)}
 	}
-	CreateSession(w, ship, ticket, point, authType)
+	CreateSession(w, ship, ticket, point, validAuthType)
 	data := types.PxSession{
-		Ship:       ship,
-		Point:      point,
-		Ticket:     ticket,
-		Passphrase: passphrase,
-		AuthType:   authType,
+		Ship:     ship,
+		Point:    point,
+		Ticket:   ticket,
+		AuthType: validAuthType,
+		Wallet:   wallet,
 	}
 	if err := h.tmpl.ExecuteTemplate(w, "dashboard-content", data); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Template error: %v", err))
 		return
 	}
+}
+
+func (h *Handler) handleAuthChallenge(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	ship := r.FormValue("ship")
+	address := r.FormValue("address")
+	challenge := fmt.Sprintf("Sign this message to authenticate %s: %x", ship, securecookie.GenerateRandomKey(16))
+	data := map[string]string{
+		"challenge": challenge,
+		"address":   address,
+		"ship":      ship,
+	}
+	h.tmpl.ExecuteTemplate(w, "sign-challenge", data)
 }
 
 func (h *Handler) handleChangeSponsor(w http.ResponseWriter, r *http.Request) {
@@ -579,7 +625,7 @@ func (h *Handler) handleWalletConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	session.AuthType = r.FormValue("type")
-	session.Wallet = &types.WalletData{
+	session.Wallet = types.WalletData{
 		Address: r.FormValue("address"),
 	}
 	CreateSession(w, session.Ship, session.Ticket, session.Point, session.AuthType)
@@ -614,6 +660,31 @@ func (h *Handler) handleWalletSign(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+}
 
-	// Handle other auth types using existing logic
+func verifySignature(address, signature, challenge string) bool {
+	if address[:2] == "0x" {
+		address = address[2:]
+	}
+	if signature[:2] == "0x" {
+		signature = signature[2:]
+	}
+	sigBytes, err := hexutil.Decode("0x" + signature)
+	if err != nil {
+		return false
+	}
+	msg := []byte("\x19Ethereum Signed Message:\n" + strconv.Itoa(len(challenge)) + challenge)
+	hash := crypto.Keccak256Hash(msg)
+	if len(sigBytes) != 65 {
+		return false
+	}
+	if sigBytes[64] >= 27 {
+		sigBytes[64] -= 27
+	}
+	pubKey, err := crypto.SigToPub(hash.Bytes(), sigBytes)
+	if err != nil {
+		return false
+	}
+	recoveredAddr := crypto.PubkeyToAddress(*pubKey)
+	return strings.EqualFold(recoveredAddr.Hex(), "0x"+address)
 }

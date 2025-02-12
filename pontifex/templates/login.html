@@ -8,69 +8,27 @@
         <h4>Azimuth public key cryptography operation web portal</h4>
         <div class="divider">★ ★ ★</div>
     </span>
-    <form class="login-form" 
-          hx-post="/auth" 
-          hx-target-error="#login-error"
-          hx-target="#main-content">
-        <div class="form-group">
-            <label for="ship">SHIP NAME</label>
-            <input type="text" 
-                   id="ship" 
-                   name="ship" 
-                   placeholder="~sampel-palnet" 
-                   required>
-        </div>
+    
+    <div class="centered">
+            <button class="action-button" 
+                    hx-get="/auth/key-form" 
+                    hx-target="#auth-form">
+                Master ticket
+            </button>
+            <button class="action-button" 
+                    hx-get="/auth/hardware-form" 
+                    hx-target="#auth-form">
+                Hardware key
+            </button>
+    </div>
 
-        <div class="form-group">
-            <label for="ticket">MASTER TICKET OR ETH KEY</label>
-            <input type="password" 
-                   id="ticket" 
-                   name="ticket" 
-                   required>
-        </div>
+    <div id="auth-form"></div>
 
-        <div class="form-group">
-            <label class="checkbox-container">
-                <input type="checkbox" 
-                       id="use-passphrase"
-                       onclick="document.getElementById('passphrase-section').style.display = this.checked ? 'block' : 'none'">
-                Use passphrase
-            </label>
-            <div id="passphrase-section" class="form-group" style="display: none">
-                <input type="password" 
-                       id="passphrase" 
-                       name="passphrase"
-                       placeholder="Optional passphrase">
-            </div>
-        </div>
-
-        <div class="centered">
-            <div class="action-grid">
-                <button class="action-button" type="submit">Submit Key</button>
-                <button class="action-button" type="button" id="chi-button" onclick="initWC()">
-                    Init hardware key
-                </button>
-            </div>
-            <div id="login-error"></div>
-        </div>
-
-        <div id="chi-status" style="display: none;">
-            <div class="info-section">
-                <div class="info-header">
-                    <span>Hardware interface status</span>
-                </div>
-                <div class="wallet-status disconnected">
-                    <span>DEVICE STATUS: Connecting...</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="status">
-            <span class="centered">
-                <p class="blink" content-align="center">[ System Status: Online ]</p>
-            </span>
-        </div>
-    </form>
+    <div class="status">
+        <span class="centered">
+            <p class="blink" content-align="center">[ System Status: Online ]</p>
+        </span>
+    </div>
     <div class="divider">✧ ✧ ✧</div>
 </div>
 {{end}}

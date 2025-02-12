@@ -1,0 +1,18 @@
+{{define "sign-challenge"}}
+<div class="info-section">
+    <div class="info-header">
+        <span>Hardware interface status</span>
+    </div>
+    <div class="wallet-status">
+        <span>DEVICE STATUS: Awaiting signature</span>
+    </div>
+</div>
+
+<input type="hidden" id="challenge" value="{{.challenge}}">
+<input type="hidden" id="address" value="{{.address}}">
+<input type="hidden" id="ship" value="{{.ship}}">
+
+<script>
+    signChallenge();
+</script>
+{{end}}

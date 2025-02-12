@@ -1,0 +1,47 @@
+{{define "hardware-form"}}
+<form class="login-form" 
+      id="hw-form"
+      hx-post="/auth/challenge"
+      hx-target="#main-content">
+    <div class="form-group">
+        <label for="ship">SHIP NAME</label>
+        <input type="text" 
+               id="ship" 
+               name="ship" 
+               placeholder="~sampel-palnet" 
+               required>
+    </div>
+
+    <input type="hidden" id="wallet-address" name="address">
+    <input type="hidden" name="auth_type" value="hardware">
+
+    <div id="chi-status">
+        <div class="info-section">
+            <div class="info-header">
+                <span>Hardware interface status</span>
+            </div>
+            <div class="wallet-status disconnected">
+                <span>DEVICE STATUS: Not connected</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="centered">
+        <div class="action-grid">
+            <button class="action-button"
+                    type="button"
+                    onclick="initWC()"
+                    id="chi-button">
+                Init hardware key
+            </button>
+            <button class="action-button"
+                    type="submit"
+                    id="submit-hw"
+                    style="display: none">
+                Submit
+            </button>
+        </div>
+        <div id="login-error"></div>
+    </div>
+</form>
+{{end}}

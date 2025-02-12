@@ -6,7 +6,7 @@ type PxSession struct {
 	Point      PointResp
 	AuthType   string
 	Passphrase string
-	Wallet     *WalletData `json:",omitempty"`
+	Wallet     WalletData `json:",omitempty"`
 }
 
 type WalletData struct {

@@ -44,41 +44,54 @@ async function signMessage(message) {
     });
 }
 
-
 async function initWC() {
-    const statusDiv = document.getElementById('chi-status');
-    statusDiv.style.display = 'block';
-    
     if (!window.ethereum) {
         document.querySelector('.wallet-status').innerHTML = 
-            '<span>DEVICE STATUS: NO DEVICE DETECTED</span>';
+            '<span>DEVICE STATUS: Not connected</span>';
         return;
     }
-    
     try {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const address = await window.ethereum.request({ 
+        const accounts = await window.ethereum.request({ 
             method: 'eth_accounts' 
         });
-        
-        if (address[0]) {
+        if (accounts[0]) {
             document.querySelector('.wallet-status').innerHTML = 
-                '<span>DEVICE STATUS: ACTIVE [ID: ' + 
-                address[0].slice(0,6) + '...' + 
-                address[0].slice(-4) + ']</span>';
+                '<span>DEVICE STATUS: Connected [' + 
+                accounts[0].slice(0,6) + '...' + 
+                accounts[0].slice(-4) + ']</span>';
             document.querySelector('.wallet-status').classList.remove('disconnected');
             document.querySelector('.wallet-status').classList.add('connected');
-            
-            htmx.ajax('POST', '/auth', {
-                values: {
-                    ship: document.getElementById('ship').value,
-                    type: 'hardware',
-                    address: address[0]
-                }
-            });
+            document.getElementById('wallet-address').value = accounts[0];
+            document.getElementById('submit-hw').style.display = 'block';
         }
     } catch (err) {
         document.querySelector('.wallet-status').innerHTML = 
             '<span>DEVICE STATUS: ERROR - ' + err.message + '</span>';
+    }
+}
+
+async function signChallenge() {
+    const challenge = document.getElementById('challenge').value;
+    const address = document.getElementById('address').value;
+    const ship = document.getElementById('ship').value;
+    try {
+        const signature = await window.ethereum.request({
+            method: 'personal_sign',
+            params: [challenge, address]
+        });
+        htmx.ajax('POST', '/auth', {
+            values: {
+                ship: ship,
+                address: address,
+                signature: signature,
+                challenge: challenge,
+                auth_type: 'hardware'
+            }
+        });
+    } catch (err) {
+        htmx.ajax('POST', '/auth/error', {
+            values: { error: err.message }
+        });
     }
 }

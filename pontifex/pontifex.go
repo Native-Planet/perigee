@@ -198,7 +198,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleCancelEscape(w, r)
 	case "/escape":
 		h.handleEscape(w, r)
-	case "adopt":
+	case "/adopt":
 		h.handleAdopt(w, r)
 	case "/wallet/connect":
 		h.handleWalletConnect(w, r)

@@ -87,11 +87,14 @@ async function signChallenge() {
                 signature: signature,
                 challenge: challenge,
                 auth_type: 'hardware'
-            }
+            },
+            target: '#main-content',
+            targetError: '#login-error'
         });
     } catch (err) {
         htmx.ajax('POST', '/auth/error', {
-            values: { error: err.message }
+            values: { error: err.message },
+            target: '#login-error'
         });
     }
 }

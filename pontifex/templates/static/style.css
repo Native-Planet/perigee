@@ -180,19 +180,16 @@ button {
     border: 2px solid #000080;
     margin: 15px 0;
     padding: 15px;
-    background: #f0f0f0;
+    background: #c0c0c0;
 }
 
-/* fixes? */
 .action-box h3 {
-    margin-top: 0;
-    color: #fff;
+    margin: -15px -15px 15px -15px;
+    padding: 5px 15px;
     background: #000080;
-    font: monospace;
-    border-bottom: 2px solid #000080;
-    padding-bottom: 5px;
+    color: #fff;
+    font-size: 14px;
 }
-
 .action-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(150px, 1fr));

@@ -192,6 +192,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleEscape(w, r)
 	case "adopt":
 		h.handleAdopt(w, r)
+	case "/wallet/connect":
+		h.handleWalletConnect(w, r)
+	case "/wallet/sign":
+		h.handleWalletSign(w, r)
 	}
 }
 
@@ -554,4 +558,62 @@ func (h *Handler) handleAdopt(w http.ResponseWriter, r *http.Request) {
 			strings.TrimPrefix(session.Ship, "~"),
 			strings.TrimPrefix(adoptee, "~")))
 	w.Write([]byte(nfoContent))
+}
+
+func (h *Handler) handleWalletConnect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+
+	var session types.PxSession
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	session.AuthType = r.FormValue("type")
+	session.Wallet = &types.WalletData{
+		Address: r.FormValue("address"),
+	}
+	CreateSession(w, session.Ship, session.Ticket, session.Point, session.AuthType)
+	if err := h.tmpl.ExecuteTemplate(w, "wallet-connected", session); err != nil {
+		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) handleWalletSign(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "No session found", http.StatusUnauthorized)
+		return
+	}
+	var session types.PxSession
+	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
+		securecookie.New(sessionKey, nil)); err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+	if session.AuthType == "hardware" {
+		if err := h.tmpl.ExecuteTemplate(w, "wallet-sign-prompt", map[string]string{
+			"message": r.FormValue("message"),
+			"address": session.Wallet.Address,
+		}); err != nil {
+			http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Handle other auth types using existing logic
 }

@@ -1,0 +1,59 @@
+{{define "wallet-sign"}}
+<div class="sign-dialog" id="sign-prompt">
+    <div class="sign-dialog-header">
+        SIGNATURE REQUIRED
+    </div>
+    
+    <div class="info-row">
+        <span>Message:</span>
+        <div class="sign-message-box">{{.message}}</div>
+    </div>
+
+    <div class="status-box">
+        <span class="signing-indicator">Awaiting wallet signature...</span>
+    </div>
+
+    <script>
+    async function requestSignature() {
+        if (!window.ethereum) {
+            htmx.ajax('POST', '/wallet/sign/error', {
+                values: { error: 'No wallet detected' }
+            });
+            return;
+        }
+        
+        try {
+            const sig = await window.ethereum.request({
+                method: 'personal_sign',
+                params: ['{{.message}}', '{{.address}}']
+            });
+            
+            htmx.ajax('POST', '/wallet/sign', {
+                values: { signature: sig }
+            });
+        } catch (err) {
+            htmx.ajax('POST', '/wallet/sign/error', {
+                values: { error: err.message }
+            });
+        }
+    }
+    
+    requestSignature();
+    </script>
+</div>
+<div class="wallet-error">
+    {{.error}}
+</div>
+<div class="wallet-section">
+    <div class="wallet-header">
+        <span>WALLET CONNECTED</span>
+    </div>
+    <div class="info-row">
+        <span>Address:</span>
+        <div class="wallet-address-display">{{.Wallet.Address}}</div>
+    </div>
+    <div class="status-box">
+        Connection successful
+    </div>
+</div>
+{{end}}

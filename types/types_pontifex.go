@@ -3,9 +3,14 @@ package types
 type PxSession struct {
 	Ship       string
 	Ticket     string
-	Passphrase string
 	Point      PointResp
 	AuthType   string
+	Passphrase string
+	Wallet     *WalletData `json:",omitempty"`
+}
+
+type WalletData struct {
+	Address string
 }
 
 type PxSigilConfig struct {

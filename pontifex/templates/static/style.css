@@ -102,7 +102,6 @@ button:hover {
     background: #f0f0f0;
 }
 
-/* Retro decorations */
 .divider {
     text-align: center;
     margin: 20px 0;
@@ -184,8 +183,12 @@ button {
     background: #f0f0f0;
 }
 
+/* fixes? */
 .action-box h3 {
     margin-top: 0;
+    color: #fff;
+    background: #000080;
+    font: monospace;
     border-bottom: 2px solid #000080;
     padding-bottom: 5px;
 }
@@ -568,4 +571,110 @@ button {
     position: absolute;
     left: 2px;
     top: -2px;
+}
+
+/* wallet */
+.wallet-section {
+    background: #d4d0c8;
+    border: 2px outset #fff;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.wallet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #000080;
+    color: #fff;
+    padding: 5px 10px;
+    font-family: "Courier New", monospace;
+    margin-bottom: 10px;
+}
+
+.wallet-address-display {
+    background: white;
+    padding: 6px 8px;
+    border: 2px inset #fff;
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    overflow-x: auto;
+    white-space: nowrap;
+    color: #000080;
+    width: 100%;
+    margin: 5px 0;
+}
+
+.wallet-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    padding: 8px;
+    background: white;
+    border: 2px inset #fff;
+    margin: 10px 0;
+}
+
+.wallet-status.connected {
+    color: #008000;
+}
+
+.wallet-status.disconnected {
+    color: #800000;
+}
+
+.sign-dialog {
+    background: #d4d0c8;
+    border: 2px outset #fff;
+    padding: 15px;
+    margin: 10px auto;
+    max-width: 500px;
+    font-family: "Courier New", monospace;
+}
+
+.sign-dialog-header {
+    background: #000080;
+    color: #fff;
+    padding: 5px 10px;
+    margin: -15px -15px 15px -15px;
+}
+
+.sign-message-box {
+    background: white;
+    border: 2px inset #fff;
+    padding: 8px;
+    margin: 10px 0;
+    font-family: "Courier New", monospace;
+    color: #000080;
+    min-height: 60px;
+    word-break: break-all;
+}
+
+.wallet-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.wallet-buttons .action-button {
+    min-width: 120px;
+    margin: 0;
+}
+
+.signing-indicator {
+    display: inline-block;
+    font-family: "Courier New", monospace;
+    animation: blink 1s step-end infinite;
+}
+
+.wallet-error {
+    background: #c0c0c0;
+    color: #800000;
+    border: 2px inset #fff;
+    padding: 8px;
+    margin: 10px 0;
+    font-family: "Courier New", monospace;
+    text-align: center;
 }

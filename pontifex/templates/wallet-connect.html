@@ -1,0 +1,50 @@
+{{define "wallet-connect"}}
+<div class="wallet-section">
+    <div class="wallet-header">
+        <span>WALLET CONNECTION</span>
+    </div>
+    
+    {{if not .Wallet.Address}}
+    <div class="wallet-status disconnected">
+        <span>Status: No Wallet Connected</span>
+    </div>
+    <div class="wallet-buttons">
+        <button class="action-button" hx-post="/wallet/connect" hx-trigger="click">
+            Connect Hardware Wallet
+        </button>
+    </div>
+    {{else}}
+    <div class="info-row">
+        <span>Address:</span>
+        <div class="wallet-address-display">{{.Wallet.Address}}</div>
+    </div>
+    <div class="wallet-status connected">
+        <span>Status: Connected</span>
+    </div>
+    <div class="wallet-buttons">
+        <button class="action-button warning" hx-post="/wallet/disconnect" hx-trigger="click">
+            Disconnect Wallet
+        </button>
+    </div>
+    {{end}}
+</div>
+{{end}}
+{{define "wallet-error"}}
+<div class="wallet-error">
+    {{.error}}
+</div>
+{{end}}
+{{define "wallet-success"}}
+<div class="wallet-section">
+    <div class="wallet-header">
+        <span>WALLET CONNECTED</span>
+    </div>
+    <div class="info-row">
+        <span>Address:</span>
+        <div class="wallet-address-display">{{.Wallet.Address}}</div>
+    </div>
+    <div class="status-box">
+        Connection successful
+    </div>
+</div>
+{{end}}

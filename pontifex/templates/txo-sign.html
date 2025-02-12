@@ -1,0 +1,39 @@
+{{define "transaction-sign"}}
+<div class="info-section">
+    <div class="info-header">
+        <span>Hardware interface status</span>
+    </div>
+    <div class="wallet-status">
+        <span>DEVICE STATUS: Awaiting signature</span>
+    </div>
+</div>
+
+<form id="tx-form" 
+      hx-post="/{{.operation}}"
+      hx-target="closest .action-box"
+      hx-trigger="signature-ready"
+      hx-swap="innerHTML">
+    <input type="hidden" id="tx_data" name="tx_data" value="{{.tx_data}}">
+    <input type="hidden" id="signed_tx" name="signed_tx">
+    <input type="hidden" id="address" name="address" value="{{.address}}">
+</form>
+
+<script>
+    (async function() {
+        try {
+            const signedTx = await window.ethereum.request({
+                method: 'eth_signTransaction',
+                params: [{
+                    from: document.getElementById('address').value,
+                    data: document.getElementById('tx_data').value
+                }]
+            });
+            document.getElementById('signed_tx').value = signedTx;
+            document.getElementById('tx-form').submit();
+        } catch (err) {
+            document.querySelector('.wallet-status').innerHTML = 
+                '<span>DEVICE STATUS: ERROR - ' + err.message + '</span>';
+        }
+    })();
+</script>
+{{end}}

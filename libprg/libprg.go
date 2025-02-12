@@ -70,6 +70,66 @@ func Escape(point, masterTicket, passphrase, sponsor string) (interface{}, error
 	}
 }
 
+func EscapeRawTx(address, pointStr, sponsorStr string) ([]byte, error) {
+	pInfo, err := Point(pointStr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPoint, err)
+	}
+	point, err := co.Patp2Dec(pInfo.PatpName)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPoint, err)
+	}
+	pointInt, err := strconv.Atoi(point)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPoint, err)
+	}
+	sponsorPatp, sponsor, err := types.ValidateAndNormalizePatp(sponsorStr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPoint, err)
+	}
+	if pInfo.Point.Dominion == "l1" {
+		ecliptic, err := Ecliptic()
+		if err != nil {
+			return nil, err
+		}
+		addr := common.HexToAddress(address)
+		auth := &bind.TransactOpts{
+			From:     addr,
+			Nonce:    nil,
+			GasPrice: nil,
+			GasLimit: 0,
+		}
+		tx, err := ecliptic.Escape(auth, uint32(pointInt), uint32(sponsor))
+		if err != nil {
+			return nil, err
+		}
+		return tx.Data(), nil
+	} else {
+		ctx := context.Background()
+		proxy, err := roller.Client.GetManagementProxyType(ctx, pInfo.PatpName, address)
+		if err != nil {
+			return nil, err
+		}
+		params := types.EscapeRequest{
+			Address: address,
+			From: types.FromData{
+				Ship:  pInfo.PatpName,
+				Proxy: proxy,
+			},
+			Data: struct {
+				Ship string `json:"ship"`
+			}{
+				Ship: sponsorPatp,
+			},
+		}
+		_, tx, err := roller.Client.GetRawTx(ctx, "escape", params)
+		if err != nil {
+			return nil, err
+		}
+		return tx, nil
+	}
+}
+
 func CancelEscape(point, masterTicket, passphrase, sponsor string) (interface{}, error) {
 	privateKey, _, pointInfo, _, _, err := ValidateKey(point, masterTicket, passphrase, "", false)
 	if err != nil {
@@ -284,6 +344,19 @@ func Keyfile(point, masterTicket, passphrase string, life int) (string, error) {
 	return keyfile, nil
 }
 
+func SubmitSignedL1Tx(signedTxHex string) (*ethTypes.Transaction, error) {
+	client, err := ethclient.Dial(EthProvider)
+	if err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("failed to connect to Ethereum: %v", err)
+	}
+	signedTxData := common.FromHex(signedTxHex)
+	var tx ethTypes.Transaction
+	if err := tx.UnmarshalBinary(signedTxData); err != nil {
+		return &ethTypes.Transaction{}, fmt.Errorf("unmarshal tx: %w", err)
+	}
+	return &tx, client.SendTransaction(context.Background(), &tx)
+}
+
 func setL1NetworkKeys(patp string, point *types.Point, wallet keygen.Wallet, breach bool) (*ethTypes.Transaction, error) {
 	patp, pointInt, err := types.ValidateAndNormalizePatp(patp)
 	if err != nil {
@@ -430,6 +503,18 @@ func l1Adopt(adoptee string, privateKey *ecdsa.PrivateKey) (*ethTypes.Transactio
 		},
 	}
 	return session.Adopt(adopteeInt)
+}
+
+func Ecliptic() (*ecliptic.Ecliptic, error) {
+	client, err := ethclient.Dial(EthProvider)
+	if err != nil {
+		return &ecliptic.Ecliptic{}, fmt.Errorf("failed to connect to Ethereum: %v", err)
+	}
+	eclip, err := ecliptic.NewEcliptic(common.HexToAddress(EclipticContract), client)
+	if err != nil {
+		return &ecliptic.Ecliptic{}, fmt.Errorf("failed to bind Ecliptic contract: %v", err)
+	}
+	return eclip, nil
 }
 
 func l1CancelEscape(point string, privateKey *ecdsa.PrivateKey) (*ethTypes.Transaction, error) {

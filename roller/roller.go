@@ -7,9 +7,11 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/Native-Planet/perigee/aura"
 	"github.com/Native-Planet/perigee/types"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/stevelacy/go-urbit/noun"
 )
@@ -68,6 +70,20 @@ func (r *Roller) GetSpawned(ctx context.Context, point interface{}) ([]types.Shi
 
 func (r *Roller) GetUnspawned(ctx context.Context, point interface{}) ([]types.ShipInfo, error) {
 	return r.client.GetUnspawned(ctx, point.(string))
+}
+
+func (r *Roller) GetManagementProxyType(ctx context.Context, point interface{}, address string) (string, error) {
+	return r.client.GetManagementProxyType(ctx, point.(string), address)
+}
+
+func (r *Roller) GetRawTx(ctx context.Context, method string, params interface{}) (string, []byte, error) {
+	txStr, err := r.client.GetUnsignedTx(ctx, method, params)
+	if err != nil {
+		return "", []byte{}, err
+	}
+	txStr = strings.TrimPrefix(txStr, "0x")
+	txBytes, err := hexutil.Decode(fmt.Sprintf("0x%s", txStr))
+	return txStr, txBytes, err
 }
 
 // update operations

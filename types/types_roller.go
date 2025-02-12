@@ -6,7 +6,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -563,7 +562,7 @@ func (c *Client) GetManagementProxyType(ctx context.Context, point, signingAddre
 	if strings.EqualFold(pointInfo.Ownership.ManagementProxy.Address, signingAddress) {
 		return "manage", nil
 	}
-	return "", errors.New("address is neither owner nor management proxy")
+	return "", fmt.Errorf("address %s is neither owner nor management proxy", signingAddress)
 }
 
 func (c *Client) GetNonce(ctx context.Context, params interface{}) (int, error) {
@@ -634,7 +633,6 @@ func (c *Client) GetUnsignedTx(ctx context.Context, method string, params interf
 	if err := json.Unmarshal(result, &hash); err != nil {
 		return "", fmt.Errorf("unmarshal hash: %w", err)
 	}
-
 	return hash, nil
 }
 
@@ -851,7 +849,7 @@ func (c *Client) GetSpawnProxyType(ctx context.Context, point, signingAddress st
 	if strings.EqualFold(pointInfo.Ownership.SpawnProxy.Address, signingAddress) {
 		return "spawn", nil
 	}
-	return "", fmt.Errorf("address is neither owner nor spawn proxy")
+	return "", fmt.Errorf("address %s is neither owner nor spawn proxy", signingAddress)
 }
 
 func (c *Client) GetTransferProxyType(ctx context.Context, point, signingAddress string) (string, error) {
@@ -865,7 +863,7 @@ func (c *Client) GetTransferProxyType(ctx context.Context, point, signingAddress
 	if strings.EqualFold(pointInfo.Ownership.TransferProxy.Address, signingAddress) {
 		return "transfer", nil
 	}
-	return "", fmt.Errorf("address is neither owner nor transfer proxy")
+	return "", fmt.Errorf("address %s is neither owner nor transfer proxy", signingAddress)
 }
 
 func (c *Client) CanConfigureKeys(ctx context.Context, point, address string) (bool, error) {

@@ -46,8 +46,8 @@ func init() {
 	sessionKey = buf
 }
 
-func CreateSession(w http.ResponseWriter, ship, ticket string, point types.PointResp, authType string) {
-	session := &types.PxSession{Ship: ship, Ticket: ticket, Point: point, AuthType: authType}
+func CreateSession(w http.ResponseWriter, ship, ticket string, point types.PointResp, authType, address string) {
+	session := &types.PxSession{Ship: ship, Ticket: ticket, Point: point, AuthType: authType, Wallet: address}
 	encoded, err := securecookie.EncodeMulti("session", session,
 		securecookie.New(sessionKey, nil))
 	if err != nil {
@@ -218,16 +218,13 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		h.tmpl.ExecuteTemplate(w, "login-error", "Method not allowed")
 		return
 	}
-
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Invalid form data: %v", err))
 		return
 	}
-
 	ship := r.FormValue("ship")
 	authType := r.FormValue("auth_type")
-
 	point, err := libprg.Point(ship)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -235,10 +232,11 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var ticket string
+	var address string
 	var validAuthType string
-	var wallet types.WalletData
+	var wallet string
 	if authType == "hardware" {
-		address := r.FormValue("address")
+		address = r.FormValue("address")
 		signature := r.FormValue("signature")
 		challenge := r.FormValue("challenge")
 		if !verifySignature(address, signature, challenge) {
@@ -247,20 +245,21 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		validAuthType = "hardware"
-		wallet = types.WalletData{Address: address}
+		wallet = address
 	} else {
 		ticket = r.FormValue("ticket")
 		passphrase := r.FormValue("passphrase")
-		_, pubkey, _, _, authType, err := libprg.ValidateKey(ship, ticket, passphrase, "", false)
+		_, address, _, _, authType, err = libprg.ValidateKey(ship, ticket, passphrase, "", false)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			h.tmpl.ExecuteTemplate(w, "login-error", err)
 			return
 		}
 		validAuthType = authType
-		wallet = types.WalletData{Address: fmt.Sprintf("0x%s", pubkey)}
+		wallet = address
 	}
-	CreateSession(w, ship, ticket, point, validAuthType)
+	CreateSession(w, ship, ticket, point, validAuthType, address)
+	fmt.Printf(ship, ticket, point, validAuthType, address)
 	data := types.PxSession{
 		Ship:     ship,
 		Point:    point,
@@ -525,10 +524,36 @@ func (h *Handler) handleEscape(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
 		return
 	}
-	receipt, err := libprg.Escape(session.Ship, session.Ticket, session.Passphrase, sponsor)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to initiate escape: %v", err), http.StatusInternalServerError)
-		return
+	fmt.Println(session)
+	var receipt interface{}
+	if session.AuthType == "hardware" {
+		signature := r.FormValue("signature")
+		if signature == "" {
+			address := session.Wallet
+			rawTx, err := libprg.EscapeRawTx(address, session.Ship, sponsor)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to encode transaction: %v", err), http.StatusInternalServerError)
+				return
+			}
+			data := map[string]string{
+				"tx_data":   hexutil.Encode(rawTx),
+				"address":   session.Wallet,
+				"operation": "some-operation",
+			}
+			h.tmpl.ExecuteTemplate(w, "transaction-sign", data)
+			return
+		} else {
+			if receipt, err = libprg.SubmitSignedL1Tx(signature); err != nil {
+				http.Error(w, fmt.Sprintf("Failed to broadcast transaction: %v", err), http.StatusInternalServerError)
+				return
+			}
+		}
+	} else {
+		receipt, err = libprg.Escape(session.Ship, session.Ticket, session.Passphrase, sponsor)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to initiate escape: %v", err), http.StatusInternalServerError)
+			return
+		}
 	}
 	nfoContent := formatToNFO(receipt, "ESCAPE REQUEST RECEIPT")
 	w.Header().Set("Content-Type", "text/plain")
@@ -625,10 +650,8 @@ func (h *Handler) handleWalletConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	session.AuthType = r.FormValue("type")
-	session.Wallet = types.WalletData{
-		Address: r.FormValue("address"),
-	}
-	CreateSession(w, session.Ship, session.Ticket, session.Point, session.AuthType)
+	session.Wallet = r.FormValue("address")
+	CreateSession(w, session.Ship, session.Ticket, session.Point, session.AuthType, r.FormValue("address"))
 	if err := h.tmpl.ExecuteTemplate(w, "wallet-connected", session); err != nil {
 		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
 		return
@@ -654,7 +677,7 @@ func (h *Handler) handleWalletSign(w http.ResponseWriter, r *http.Request) {
 	if session.AuthType == "hardware" {
 		if err := h.tmpl.ExecuteTemplate(w, "wallet-sign-prompt", map[string]string{
 			"message": r.FormValue("message"),
-			"address": session.Wallet.Address,
+			"address": session.Wallet,
 		}); err != nil {
 			http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
 		}

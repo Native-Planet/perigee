@@ -8,29 +8,48 @@
     </div>
 </div>
 
-<form id="tx-form" 
+<form id="tx-form"
       hx-post="/{{.operation}}"
       hx-target="closest .action-box"
-      hx-trigger="signature-ready"
-      hx-swap="innerHTML">
+      hx-swap="innerHTML"
+      hx-request='{"credentials": true}'>
     <input type="hidden" id="tx_data" name="tx_data" value="{{.tx_data}}">
     <input type="hidden" id="signed_tx" name="signed_tx">
     <input type="hidden" id="address" name="address" value="{{.address}}">
+    <input type="hidden" id="sponsor" name="sponsor" value="{{.sponsor}}">
 </form>
 
 <script>
     (async function() {
         try {
-            const signedTx = await window.ethereum.request({
-                method: 'eth_signTransaction',
-                params: [{
-                    from: document.getElementById('address').value,
-                    data: document.getElementById('tx_data').value
-                }]
-            });
+            htmx.config.withCredentials = true;
+            const provider = new WalletConnectProvider.default({});
+            await provider.enable();
+            
+            let signedTx;
+            if ("{{.Point.Dominion}}" === "l2") {
+                signedTx = await provider.request({
+                    method: 'personal_sign',
+                    params: [
+                        document.getElementById('tx_data').value,
+                        document.getElementById('address').value
+                    ]
+                });
+            } else {
+                signedTx = await provider.request({
+                    method: 'eth_signTransaction',
+                    params: [{
+                        from: document.getElementById('address').value,
+                        data: document.getElementById('tx_data').value
+                    }]
+                });
+            }
+            
             document.getElementById('signed_tx').value = signedTx;
-            document.getElementById('tx-form').submit();
+            htmx.trigger('#tx-form', 'submit');
+            
         } catch (err) {
+            console.error('Signing error:', err);
             document.querySelector('.wallet-status').innerHTML = 
                 '<span>DEVICE STATUS: ERROR - ' + err.message + '</span>';
         }

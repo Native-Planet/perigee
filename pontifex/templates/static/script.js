@@ -1,26 +1,17 @@
-// disable perma-button class after its been clicked
-document.addEventListener('DOMContentLoaded', function() {
-    const actionButtons = document.querySelectorAll('.perma-button');
-    actionButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (!this.classList.contains('disabled')) {
-                this.classList.add('disabled');
-                const buttonId = this.getAttribute('data-button-id') || this.textContent.trim();
-                localStorage.setItem(`button-${buttonId}`, 'disabled');
-                if (!this.hasAttribute('hx-post')) {
-                    e.preventDefault();
-                }
-            }
-        });
-    });
-    actionButtons.forEach(button => {
-        const buttonId = button.getAttribute('data-button-id') || button.textContent.trim();
-        if (localStorage.getItem(`button-${buttonId}`) === 'disabled') {
-            button.classList.add('disabled');
-        }
-    });
+document.addEventListener('htmx:afterRequest', function(evt) {
+    const sessionToken = evt.detail.xhr.getResponseHeader('X-Session-Token');
+    if (sessionToken) {
+        localStorage.setItem('session_token', sessionToken);
+    }
 });
-
+function addSessionHeader(evt) {
+    const token = localStorage.getItem('session_token');
+    if (token) {
+        evt.detail.headers['X-Session-Token'] = token;
+    }
+}
+htmx.config.withCredentials = true;
+document.addEventListener('htmx:configRequest', addSessionHeader);
 
 // walletconnect stuff
 async function connectWallet() {

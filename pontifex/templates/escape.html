@@ -2,7 +2,13 @@
 <div class="action-box">
     <h3>Escape to New Sponsor</h3>
     <div class="info-section">
-        <form method="post" action="/escape" class="transfer-form">
+        <form hx-post="/escape" 
+            hx-target="closest .action-box" 
+            hx-swap="innerHTML"
+            hx-on::download="window.location = htmx.closest(this, 'form').getAttribute('hx-download')"
+            hx-indicator=".download-indicator"
+            hx-request='{"credentials": true}'
+            class="transfer-form">
             <div class="info-row">
                 <span>New Sponsor:</span>
                 <div class="address-input-container">
@@ -25,7 +31,24 @@
                     Cancel
                 </button>
             </div>
+            <div class="download-indicator" style="display:none">
+                Generating receipt...
+            </div>
         </form>
     </div>
 </div>
+<script>
+    (async function() {
+        htmx.config.withCredentials = true;
+    })();
+    document.addEventListener('htmx:configRequest', function(evt) {
+        console.log('Cookie before request:', document.cookie);
+        evt.detail.headers['Cookie'] = document.cookie;
+        console.log('Request headers:', evt.detail.headers);
+    });
+    document.addEventListener('htmx:beforeRequest', function(evt) {
+        console.log('Sending request with config:', htmx.config);
+        console.log('Current cookies:', document.cookie);
+    });
+</script>
 {{end}}

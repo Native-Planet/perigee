@@ -3,6 +3,12 @@
 {{end}}
 
 {{define "dashboard-content"}}
+<script>
+    const sessionToken = '{{.SessionToken}}';
+    if (sessionToken) {
+        localStorage.setItem('session_token', sessionToken);
+    }
+</script>
 <div class="content-section">
     {{with .Point}}
 
@@ -154,5 +160,10 @@
     <div id="sponsor-form"></div>
     {{end}}
 </div>
-
+<script>
+    console.log('Dashboard loaded, cookies:', document.cookie);
+    setInterval(() => {
+        console.log('Current cookies:', document.cookie);
+    }, 1000);
+</script>
 {{end}}

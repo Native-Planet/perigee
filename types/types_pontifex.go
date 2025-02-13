@@ -1,12 +1,18 @@
 package types
 
+import (
+	"github.com/golang-jwt/jwt/v5"
+)
+
 type PxSession struct {
-	Ship       string `json:"ship"`
-	Ticket     string `json:"ticket"`
-	Point      PointResp
-	AuthType   string `json:"authType"`
-	Passphrase string `json:"passphrase"`
-	Wallet     string `json:"wallet"`
+	Ship        string `json:"ship"`
+	Ticket      string `json:"ticket"`
+	Point       PointResp
+	AuthType    string `json:"authType"`
+	Passphrase  string `json:"passphrase"`
+	Wallet      string `json:"wallet"`
+	EthProvider string `json:"ethProvider"`
+	jwt.RegisteredClaims
 }
 
 type PxSigilConfig struct {

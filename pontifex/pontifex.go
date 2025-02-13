@@ -3,19 +3,23 @@ package pontifex
 import (
 	"crypto/rand"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	html "html/template"
 	"io/fs"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/Native-Planet/perigee/libprg"
 	"github.com/Native-Planet/perigee/types"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -31,6 +35,7 @@ var (
 	funcMap     template.FuncMap
 	funcMapOnce sync.Once
 	sessionKey  = []byte{}
+	ethProvider = os.Getenv("ETH_PROVIDER")
 )
 
 type Handler struct {
@@ -44,23 +49,6 @@ func init() {
 		panic(fmt.Sprintf("error while generating random string: %s", err))
 	}
 	sessionKey = buf
-}
-
-func CreateSession(w http.ResponseWriter, ship, ticket string, point types.PointResp, authType, address string) {
-	session := &types.PxSession{Ship: ship, Ticket: ticket, Point: point, AuthType: authType, Wallet: address}
-	encoded, err := securecookie.EncodeMulti("session", session,
-		securecookie.New(sessionKey, nil))
-	if err != nil {
-		return
-	}
-	cookie := &http.Cookie{
-		Name:     "session",
-		Value:    encoded,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	}
-	http.SetCookie(w, cookie)
 }
 
 func GetTemplateFuncs() template.FuncMap {
@@ -143,6 +131,77 @@ func setupTemplates() (*template.Template, error) {
 		return nil, fmt.Errorf("parsing templates: %w", err)
 	}
 	return parsed, nil
+}
+
+func CreateSession(w http.ResponseWriter, ship, ticket string, point types.PointResp, authType, address string) (string, error) {
+	clientHalf := sessionKey[:16]
+	serverHalf := sessionKey[16:]
+	claims := jwt.MapClaims{
+		"ship":     ship,
+		"ticket":   ticket,
+		"point":    point,
+		"authType": authType,
+		"wallet":   address,
+		"exp":      time.Now().Add(time.Hour * 1).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(serverHalf)
+	if err != nil {
+		return "", fmt.Errorf("failed to create token: %v", err)
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_key",
+		Value:    base64.StdEncoding.EncodeToString(clientHalf),
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   3600,
+	})
+	w.Header().Set("X-Session-Token", tokenString)
+	return tokenString, nil
+}
+
+func ValidateSession(r *http.Request, jwtString string) (*types.PxSession, error) {
+	cookie, err := r.Cookie("session_key")
+	if err != nil {
+		return nil, fmt.Errorf("no session key cookie: %v", err)
+	}
+	clientHalf, err := base64.StdEncoding.DecodeString(cookie.Value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid session key: %v", err)
+	}
+	fullKey := make([]byte, 32)
+	copy(fullKey[:16], clientHalf)
+	copy(fullKey[16:], sessionKey)
+	token, err := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return fullKey[16:], nil
+	})
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("invalid token: %v", err)
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims format")
+	}
+	pointJSON, err := json.Marshal(claims["point"])
+	if err != nil {
+		return nil, err
+	}
+	var point types.PointResp
+	if err := json.Unmarshal(pointJSON, &point); err != nil {
+		return nil, err
+	}
+	return &types.PxSession{
+		Ship:        claims["ship"].(string),
+		Ticket:      claims["ticket"].(string),
+		Point:       point,
+		AuthType:    claims["authType"].(string),
+		Wallet:      claims["wallet"].(string),
+		EthProvider: ethProvider,
+	}, nil
 }
 
 func NewHandler() (*Handler, error) {
@@ -231,10 +290,12 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error retrieving point info: %v", err))
 		return
 	}
+
 	var ticket string
 	var address string
 	var validAuthType string
 	var wallet string
+
 	if authType == "hardware" {
 		address = r.FormValue("address")
 		signature := r.FormValue("signature")
@@ -258,19 +319,34 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		validAuthType = authType
 		wallet = address
 	}
-	CreateSession(w, ship, ticket, point, validAuthType, address)
-	fmt.Printf(ship, ticket, point, validAuthType, address)
-	data := types.PxSession{
-		Ship:     ship,
-		Point:    point,
-		Ticket:   ticket,
-		AuthType: validAuthType,
-		Wallet:   wallet,
-	}
-	if err := h.tmpl.ExecuteTemplate(w, "dashboard-content", data); err != nil {
+	var tokenString string
+	if tokenString, err = CreateSession(w, ship, ticket, point, validAuthType, address); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Template error: %v", err))
+		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Session creation failed: %v", err))
 		return
+	}
+	pxSession := types.PxSession{
+		Ship:        ship,
+		Point:       point,
+		Ticket:      ticket,
+		AuthType:    validAuthType,
+		Wallet:      wallet,
+		EthProvider: ethProvider,
+	}
+	data := struct {
+		types.PxSession
+		SessionToken string
+	}{
+		PxSession:    pxSession,
+		SessionToken: w.Header().Get("X-Session-Token"),
+	}
+	w.Header().Set("X-Session-Token", tokenString)
+	w.WriteHeader(http.StatusOK)
+	if err := h.tmpl.ExecuteTemplate(w, "dashboard-content", data); err != nil {
+		fmt.Printf("Template error: %v\n", err)
+	}
+	if err := h.tmpl.ExecuteTemplate(w, "dashboard-content", pxSession); err != nil {
+		fmt.Printf("Template error: %v\n", err)
 	}
 }
 
@@ -513,41 +589,60 @@ func (h *Handler) handleEscape(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No sponsor specified", http.StatusBadRequest)
 		return
 	}
-	cookie, err := r.Cookie("session")
+	token := r.Header.Get("X-Session-Token")
+	session, err := ValidateSession(r, token)
 	if err != nil {
-		http.Error(w, "No session found", http.StatusUnauthorized)
-		return
-	}
-	var session types.PxSession
-	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
-		securecookie.New(sessionKey, nil)); err != nil {
-		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	fmt.Println(session)
 	var receipt interface{}
 	if session.AuthType == "hardware" {
-		signature := r.FormValue("signature")
-		if signature == "" {
-			address := session.Wallet
-			rawTx, err := libprg.EscapeRawTx(address, session.Ship, sponsor)
+		if r.FormValue("signed_tx") == "" {
+			sponsor := r.FormValue("sponsor")
+			if sponsor == "" {
+				http.Error(w, "No sponsor specified", http.StatusBadRequest)
+				return
+			}
+			rawTx, err := libprg.EscapeRawTx(session.Wallet, session.Ship, sponsor)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("Failed to encode transaction: %v", err), http.StatusInternalServerError)
 				return
 			}
-			data := map[string]string{
-				"tx_data":   hexutil.Encode(rawTx),
-				"address":   session.Wallet,
-				"operation": "some-operation",
+			data := struct {
+				Point     types.PointResp
+				TxData    string
+				Address   string
+				Operation string
+			}{
+				Point:     session.Point,
+				TxData:    hexutil.Encode(rawTx),
+				Address:   session.Wallet,
+				Operation: "escape",
 			}
 			h.tmpl.ExecuteTemplate(w, "transaction-sign", data)
 			return
-		} else {
-			if receipt, err = libprg.SubmitSignedL1Tx(signature); err != nil {
+		}
+		signature := r.FormValue("signed_tx")
+		if session.Point.Point.Dominion == "l1" {
+			receipt, err = libprg.SubmitSignedL1Tx(signature)
+			if err != nil {
 				http.Error(w, fmt.Sprintf("Failed to broadcast transaction: %v", err), http.StatusInternalServerError)
 				return
 			}
+		} else {
+			receipt = "{\"receipt\":\"l2 signed txo\"}"
 		}
+		nfoContent := formatToNFO(receipt, "ESCAPE REQUEST RECEIPT")
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Disposition",
+			fmt.Sprintf("attachment; filename=%s-escape-receipt.nfo",
+				strings.TrimPrefix(session.Ship, "~")))
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Trigger", "download")
+		}
+		w.Write([]byte(nfoContent))
+		return
 	} else {
 		receipt, err = libprg.Escape(session.Ship, session.Ticket, session.Passphrase, sponsor)
 		if err != nil {
@@ -560,6 +655,9 @@ func (h *Handler) handleEscape(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition",
 		fmt.Sprintf("attachment; filename=%s-escape-receipt.nfo",
 			strings.TrimPrefix(session.Ship, "~")))
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Trigger", "download")
+	}
 	w.Write([]byte(nfoContent))
 }
 
@@ -636,13 +734,11 @@ func (h *Handler) handleWalletConnect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	cookie, err := r.Cookie("session")
 	if err != nil {
 		http.Error(w, "No session found", http.StatusUnauthorized)
 		return
 	}
-
 	var session types.PxSession
 	if err := securecookie.DecodeMulti("session", cookie.Value, &session,
 		securecookie.New(sessionKey, nil)); err != nil {

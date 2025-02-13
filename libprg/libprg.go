@@ -92,12 +92,20 @@ func EscapeRawTx(address, pointStr, sponsorStr string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		client, err := ethclient.Dial(EthProvider)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to Ethereum: %v", err)
+		}
 		addr := common.HexToAddress(address)
+		gasPrice, err := client.SuggestGasPrice(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get gas price: %v", err)
+		}
 		auth := &bind.TransactOpts{
 			From:     addr,
-			Nonce:    nil,
-			GasPrice: nil,
-			GasLimit: 0,
+			GasPrice: gasPrice,
+			GasLimit: 300000,
+			NoSend:   true,
 		}
 		tx, err := ecliptic.Escape(auth, uint32(pointInt), uint32(sponsor))
 		if err != nil {
@@ -122,11 +130,12 @@ func EscapeRawTx(address, pointStr, sponsorStr string) ([]byte, error) {
 				Ship: sponsorPatp,
 			},
 		}
-		_, tx, err := roller.Client.GetRawTx(ctx, "escape", params)
+		hash, _, err := roller.Client.GetRawTx(ctx, "escape", params)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get unsigned tx: %v", err)
 		}
-		return tx, nil
+		cleanHash := strings.TrimPrefix(hash, "0x")
+		return hex.DecodeString(cleanHash)
 	}
 }
 

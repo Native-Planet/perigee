@@ -381,6 +381,63 @@ var GetKeyfileCmd = &cobra.Command{
 	},
 }
 
+var GetCodeCmd = &cobra.Command{
+	Use:   "get-code",
+	Short: "Generate a +code from master ticket",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		point, err := cmd.Flags().GetString("point")
+		if err != nil {
+			return fmt.Errorf("error getting point flag: %v", err)
+		}
+		if point == "" {
+			return fmt.Errorf("point is required")
+		}
+		step, err := cmd.Flags().GetInt("step")
+		if err != nil {
+			return fmt.Errorf("error getting step: %v", err)
+		}
+		life, err := cmd.Flags().GetInt("life")
+		if err != nil {
+			return fmt.Errorf("error getting life flag: %v", err)
+		}
+		if life == 0 {
+			pInfo, err := libprg.Point(point)
+			if err != nil {
+				return fmt.Errorf("error retrieving point: %v", err)
+			}
+			life, err = strconv.Atoi(pInfo.Point.Network.Keys.Life)
+			if err != nil {
+				return fmt.Errorf("invalid life: %v", err)
+			}
+		}
+		masterTicket, err := cmd.Flags().GetString("master-ticket")
+		if err != nil {
+			return fmt.Errorf("error getting master-ticket flag: %v", err)
+		}
+		if masterTicket == "" {
+			if !cmd.Flags().Changed("private-key") {
+				return fmt.Errorf("master-ticket is required")
+			} else {
+				ethKey, err := cmd.Flags().GetString("private-key")
+				if err != nil {
+					return fmt.Errorf("error getting private-key flag: %v", err)
+				}
+				masterTicket = ethKey
+			}
+		}
+		passphrase, err := cmd.Flags().GetString("passphrase")
+		if err != nil {
+			return fmt.Errorf("error getting passphrase flag: %v", err)
+		}
+		code, err := libprg.GenerateCode(point, masterTicket, passphrase, life, step)
+		if err != nil {
+			return fmt.Errorf("error generating +code: %v", err)
+		}
+		fmt.Println(code)
+		return nil
+	},
+}
+
 func validatePath(pathStr string) (string, error) {
 	cleanPath := filepath.Clean(pathStr)
 	absPath, err := filepath.Abs(cleanPath)

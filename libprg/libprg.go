@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
 	"errors"
@@ -916,4 +917,84 @@ func reverseBytes(input []byte) []byte {
 		reversed[len(input)-i-1] = v
 	}
 	return reversed
+}
+
+// +code
+// step is for incrementing the code revision
+func GenerateCode(point, ticket, passphrase string, life, step int) (string, error) {
+	wallet, _, _, err := getWalletAndPoint(point, ticket, passphrase, life, true)
+	if err != nil {
+		return "", err
+	}
+	ringHex := wallet.Network.Keys.Crypt.Private + wallet.Network.Keys.Auth.Private + "42"
+	ring := hex2buf(ringHex)
+	bsalt, _ := new(big.Int).SetString("73736170", 16)
+	esalt := new(big.Int).SetInt64(int64(step))
+	saltInt := new(big.Int).Add(bsalt, esalt)
+	salt := hex2buf(saltInt.Text(16))
+	hash := shax(ring)
+	result := shaf(hash, salt)
+	half := result[:len(result)/2]
+	hexHalf := buf2hex(half)
+	patp, err := co.Hex2Patp(hexHalf)
+	if err != nil {
+		return "", err
+	}
+	return patp[1:], nil
+}
+
+func shas(buf, salt []byte) []byte {
+	bufHash := shax(buf)
+	paddedSalt := make([]byte, len(bufHash))
+	copy(paddedSalt, salt)
+	xorred := xor(paddedSalt, bufHash)
+	return shax(xorred)
+}
+
+func shaf(buf, salt []byte) []byte {
+	result := shas(buf, salt)
+	halfway := len(result) / 2
+	front := result[:halfway]
+	back := result[halfway:]
+	return xor(front, back)
+}
+
+func shax(data []byte) []byte {
+	hash := sha256.Sum256(data)
+	return hash[:]
+}
+
+func xor(a, b []byte) []byte {
+	length := len(a)
+	if len(b) < length {
+		length = len(b)
+	}
+	result := make([]byte, len(b))
+	for i := 0; i < length; i++ {
+		result[i] = a[i] ^ b[i]
+	}
+	for i := length; i < len(b); i++ {
+		result[i] = b[i]
+	}
+	return result
+}
+
+func hex2buf(hexStr string) []byte {
+	buf, err := hex.DecodeString(hexStr)
+	if err != nil {
+		panic(fmt.Sprintf("Invalid hex string: %s", hexStr))
+	}
+	reversed := make([]byte, len(buf))
+	for i := 0; i < len(buf); i++ {
+		reversed[i] = buf[len(buf)-i-1]
+	}
+	return reversed
+}
+
+func buf2hex(buf []byte) string {
+	reversed := make([]byte, len(buf))
+	for i := 0; i < len(buf); i++ {
+		reversed[i] = buf[len(buf)-i-1]
+	}
+	return hex.EncodeToString(reversed)
 }

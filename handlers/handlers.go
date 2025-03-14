@@ -15,7 +15,7 @@ import (
 
 var adminToken = os.Getenv("ADMIN_TOKEN")
 
-func parseLife(lifeStr string) (int, error) {
+func parseInt(lifeStr string) (int, error) {
 	if lifeStr == "" {
 		return 0, nil
 	}
@@ -85,7 +85,7 @@ func GetWallet() http.HandlerFunc {
 		var life int
 		point := r.URL.Query().Get("point")
 		ticket := r.URL.Query().Get("ticket")
-		life, err := parseLife(r.URL.Query().Get("life"))
+		life, err := parseInt(r.URL.Query().Get("life"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -134,7 +134,7 @@ func GetKeyfile() http.HandlerFunc {
 		}
 		point := r.URL.Query().Get("point")
 		ticket := r.URL.Query().Get("ticket")
-		life, err := parseLife(r.URL.Query().Get("life"))
+		life, err := parseInt(r.URL.Query().Get("life"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -150,6 +150,38 @@ func GetKeyfile() http.HandlerFunc {
 			Point:   point,
 			Keyfile: keyfile,
 		})
+	}
+}
+
+func GetCode() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		point := r.URL.Query().Get("point")
+		ticket := r.URL.Query().Get("ticket")
+		passphrase := r.URL.Query().Get("passphrase")
+		if point == "" || ticket == "" {
+			http.Error(w, "Missing point or ticket parameter", http.StatusBadRequest)
+			return
+		}
+		life, err := parseInt(r.URL.Query().Get("life"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		step, err := parseInt(r.URL.Query().Get("life"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		code, err := libprg.GenerateCode(point, ticket, passphrase, life, step)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, `{code": "`+code+`"}`)
 	}
 }
 

@@ -171,4 +171,4 @@ perigee adopt --point=sampel adoptee=sampel-palnet --master-ticket=sampel-palnet
 
 ### Todo
 
-- L1 breaches
+- uhh finish the half-finished bridge alternative frontend that serves on the root path. it can breach and escape but i got sidetracked before i got hardware wallet support fully functional

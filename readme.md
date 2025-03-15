@@ -82,7 +82,19 @@ perigee get-point --point=sampel-palnet
 
 ---
 
+### `get-code`
+- get the `+code` of a point
+##### server
 
+`curl http://localhost:8080/v1/get/code\?point=sampel-palnet&ticket=sampel-palnet-sampel-palnet`
+
+##### cli
+
+```bash
+perigee get-code --point=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet
+```
+
+(optional flags: `--life`, `--output-dir`, `step` (integer you can increment if the +code has been reset); also writes to `./out/sampel-palnet.code` unless output path is overriden)
 
 ### `get-pending`
 - get all pending rollup txos

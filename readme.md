@@ -6,9 +6,9 @@ An HTTP server and CLI tool for performing Azimuth PKI operations for Urbit IDs
 
 This is a pure Go utility that you can run as an HTTP server or command line tool. It is a wrapper around the [L2 roller RPC](https://urbit.github.io/roller-rpc-client/) client spec and go bindings for the Azimuth/Ecliptic L1 contracts, but it also has macros and conveniences for deriving the data required for transactions. This allows you to e.g. breach a ship on L1 or L2 with a single command, knowing only the `@p` and the master ticket (or eth wallet private key). 
 
-Additionally, it contains a library (`github.com/Native-Planet/perigee/libprg`) with a simple interface that can be imported by other projects, and a library (`github.com/Native-Planet/perigee/aura`) for casting to `@uw` in golang, which allows you to generate valid keyfiles to boot your ship -- this removes the dependency on [Bridge](https://bridge.urbit.org) and allows you to automate PKI updates.
+Additionally, it contains a library (`github.com/Native-Planet/perigee/libprg`) with a simple interface that can be imported by other projects, and a library (`github.com/Native-Planet/perigee/aura`) for casting to `@uw` in golang, which allows you to generate valid keyfiles to boot your ship -- this removes the dependency on [Bridge](https://bridge.urbit.org) and allows you to automate PKI updates. You can also generate a ship's `+code`.
 
-Big thanks to [stephenlacy](https://github.com/stephenlacy/go-urbit) for doing the hard part.
+Big thanks to [stephenlacy](https://github.com/stephenlacy/go-urbit), [nathanlever](https://github.com/nathanlever/keygen) and everyone who worked on [Bridge](https://github.com/urbit/bridge) and [urbit-key-generation](https://github.com/urbit/urbit-key-generation) for doing the hard parts.
 
 For now this library can only perform L2 transactions.
 

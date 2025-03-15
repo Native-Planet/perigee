@@ -181,7 +181,7 @@ func GetCode() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		writeJSON(w, `{code": "`+code+`"}`)
+		writeJSON(w, map[string]string{"code": code})
 	}
 }
 

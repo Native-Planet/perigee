@@ -1,2 +1,9 @@
 perigee
 out/
+web/
+/perigee.wasm
+# allow desk assets even though we ignore web/ elsewhere
+!desk/web/
+!desk/web/**
+web/
+zod/

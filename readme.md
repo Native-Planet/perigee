@@ -35,6 +35,12 @@ docker build -t perigee
 docker run -v $(pwd)/out:/out -p 8080:8080 perigee
 ```
 
+### Static web bundle (no server)
+
+- Build the wasm target: `GOOS=js GOARCH=wasm go build -o web/perigee.wasm ./wasm`
+- Serve the `web/` directory as static files (includes `index.html`, `wasm_exec.js`, and the Pontifex CSS/assets), e.g. `cd web && python3 -m http.server 8080`
+- The browser calls the roller directly; ensure `ROLLER_URL` allows CORS from your origin. L1 actions still need `ETH_PROVIDER`, which is not available inside the browser bundle.
+
 > Note that you can use the `privkey` url parameter or `--private-key` cli arg instead of a master ticket and provide an ethereum wallet private key for an ownership or management address
 
 

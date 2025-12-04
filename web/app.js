@@ -5,8 +5,8 @@ const outputEl = document.getElementById("action-output");
 const state = {
     session: null,
     config: {
-        rollerUrl: "https://roller.urbit.org",
-        ethProvider: "",
+        rollerUrl: localStorage.getItem("perigee-roller-url") || "https://roller.urbit.org",
+        ethProvider: localStorage.getItem("perigee-eth-provider") || "",
     },
 };
 
@@ -160,6 +160,7 @@ function renderDashboard() {
             <div class="action-box">
                 <h3>Identity</h3>
                 <div class="ship-header">
+                    <div class="sigil-container" id="sigil-slot"></div>
                     <div>
                         <h2 class="ship-name">${point.patp || session.ship}</h2>
                         <span class="ship-dominion">
@@ -240,8 +241,21 @@ function renderDashboard() {
         </div>
     `;
 
+    loadSigil(point.patp || session.ship, 128);
     wireEndpointForm();
     wireDashboardHandlers();
+}
+
+async function loadSigil(patp, size = 128) {
+    const slot = document.getElementById("sigil-slot");
+    if (!slot) return;
+    try {
+        const svg = await call("sigil", patp, size);
+        slot.innerHTML = svg;
+    } catch (err) {
+        console.error("sigil error", err);
+        slot.innerText = "";
+    }
 }
 
 function endpointForm() {
@@ -290,6 +304,8 @@ function wireEndpointForm() {
             await call("setEthProvider", ethProvider);
             state.config.rollerUrl = rollerUrl;
             state.config.ethProvider = ethProvider;
+            localStorage.setItem("perigee-roller-url", rollerUrl);
+            localStorage.setItem("perigee-eth-provider", ethProvider);
             setStatus("Endpoints applied.", "ok");
         } catch (err) {
             console.error(err);

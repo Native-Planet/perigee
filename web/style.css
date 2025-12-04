@@ -472,7 +472,9 @@ button {
 
 .transfer-buttons {
     display: flex;
-    justify-content: center;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
     gap: 15px;
     margin-top: 20px;
     padding: 10px;
@@ -508,6 +510,7 @@ button {
 
 .transfer-buttons .action-button, .breach-form-buttons .action-button {
     min-width: 150px;
+    width: auto;
     margin: 0;
 }
 

@@ -12,6 +12,7 @@ import (
 	"syscall/js"
 
 	"github.com/Native-Planet/perigee/libprg"
+	"github.com/Native-Planet/perigee/pontifex"
 	"github.com/Native-Planet/perigee/roller"
 	"github.com/Native-Planet/perigee/types"
 )
@@ -53,6 +54,7 @@ func registerCallbacks() {
 	perigee.Set("transfer", makePromise(transfer))
 	perigee.Set("setEthProvider", makePromise(setEthProvider))
 	perigee.Set("setRollerURL", makePromise(setRollerURL))
+	perigee.Set("sigil", makePromise(sigil))
 	js.Global().Set("perigee", perigee)
 }
 
@@ -291,6 +293,27 @@ func setRollerURL(args []js.Value) (interface{}, error) {
 		HTTPClient: http.DefaultClient,
 	})
 	return url, nil
+}
+
+func sigil(args []js.Value) (interface{}, error) {
+	if len(args) == 0 {
+		return nil, errors.New("patp required")
+	}
+	patp := strings.TrimSpace(args[0].String())
+	size := 128
+	if len(args) > 1 {
+		if n, err := strconv.Atoi(strings.TrimSpace(args[1].String())); err == nil && n > 0 {
+			size = n
+		}
+	}
+	svg, err := pontifex.GenerateSigil(types.PxSvgConfig{
+		Point: patp,
+		Size:  size,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("sigil generation: %w", err)
+	}
+	return svg, nil
 }
 
 func requireSession() (*session, error) {

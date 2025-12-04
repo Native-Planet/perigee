@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pontifex</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><img src="./planet.gif" alt="planet" style="height:48px;vertical-align:middle;"> Pontifex <img src="./planet.gif" alt="planet" style="height:48px;vertical-align:middle;"></h1>
+        </div>
+        <div id="status" class="status" style="display:none;"></div>
+        <div id="main-content" class="content"></div>
+        <div id="action-output" class="response-area" style="display:none;"></div>
+    </div>
+
+    <script src="./wasm_exec.js"></script>
+    <script type="module" src="./app.js"></script>
+</body>
+</html>

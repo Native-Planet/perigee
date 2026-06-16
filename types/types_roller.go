@@ -248,6 +248,7 @@ type FromData struct {
 type Client struct {
 	Endpoint   string
 	HttpClient *http.Client
+	Headers    http.Header
 	ReqCounter atomic.Int64
 }
 
@@ -280,6 +281,11 @@ func (c *Client) DoRequest(ctx context.Context, method string, params interface{
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	for key, values := range c.Headers {
+		for _, value := range values {
+			httpReq.Header.Add(key, value)
+		}
+	}
 
 	resp, err := c.HttpClient.Do(httpReq)
 	if err != nil {

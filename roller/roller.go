@@ -37,6 +37,7 @@ type Roller struct {
 type Config struct {
 	Endpoint   string
 	HTTPClient *http.Client
+	Headers    http.Header
 }
 
 func New(cfg Config) *Roller {
@@ -46,6 +47,7 @@ func New(cfg Config) *Roller {
 	client := &types.Client{
 		Endpoint:   cfg.Endpoint,
 		HttpClient: cfg.HTTPClient,
+		Headers:    cfg.Headers,
 	}
 	return &Roller{
 		client: client,

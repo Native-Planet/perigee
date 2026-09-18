@@ -220,7 +220,7 @@ func (h *Handler) handleAuth(w http.ResponseWriter, r *http.Request) {
 		h.tmpl.ExecuteTemplate(w, "login-error", fmt.Sprintf("Error retrieving point info: %v", err))
 		return
 	}
-	_, _, _, _, authType, err := libprg.ValidateKey(r.Context(), ship, ticket, passphrase, "", false)
+	_, _, _, _, authType, err := libprg.ValidateKey(r.Context(), ship, ticket, passphrase, "", false, false)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		h.tmpl.ExecuteTemplate(w, "login-error", err)

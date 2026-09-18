@@ -77,6 +77,23 @@ type TicketResp struct {
 	Ticket string `json:"ticket"`
 }
 
+type SpawnResult struct {
+	Ship        uint32       `json:"ship"`
+	Patp        string       `json:"patp"`
+	ParentPatp  string       `json:"parentPatp,omitempty"`
+	Ticket      string       `json:"ticket"`
+	Owner       string       `json:"owner"`
+	Dominion    string       `json:"dominion,omitempty"`
+	SpawnProxy  string       `json:"spawnProxy,omitempty"`
+	ManageProxy string       `json:"manageProxy,omitempty"`
+	SpawnTx     interface{}  `json:"spawnTx"`
+	ActivateTx  interface{}  `json:"activateTx,omitempty"`
+	AcceptTx    interface{}  `json:"acceptTx,omitempty"`
+	KeysTx      interface{}  `json:"keysTx,omitempty"`
+	NetworkKeys *NetworkKeys `json:"networkKeys,omitempty"`
+	Keyfile     string       `json:"networkKeyfile,omitempty"`
+}
+
 func UnmarshalPoint(raw json.RawMessage) (string, uint32, error) {
 	var strPoint string
 	if err := json.Unmarshal(raw, &strPoint); err == nil {

@@ -86,12 +86,16 @@ type pendingSummary struct {
 	PollInterval int    `json:"pollInterval,omitempty"`
 }
 
+type batchInfo struct {
+	TimeUntilNext int `json:"timeUntilNext"`
+}
+
 type pointResponse struct {
 	OK        bool                     `json:"ok"`
 	Ship      string                   `json:"ship,omitempty"`
 	Point     *perigeeTypes.Point      `json:"point,omitempty"`
 	Pending   []perigeeTypes.PendingTx `json:"pending,omitempty"`
-	Batch     *perigeeTypes.BatchInfo  `json:"batch,omitempty"`
+	Batch     *batchInfo               `json:"batch,omitempty"`
 	Status    string                   `json:"status,omitempty"`
 	PendingTx any                      `json:"pendingTx,omitempty"`
 }
@@ -269,7 +273,7 @@ func getPoint(args []js.Value) (any, error) {
 		resp.Pending = pending
 	}
 	if batch, err := client.WhenNextBatch(ctx); err == nil {
-		resp.Batch = batch
+		resp.Batch = &batchInfo{TimeUntilNext: int(batch / time.Second)}
 	}
 	if strings.TrimSpace(req.Hash) != "" {
 		target := normalizeRollerEndpoint(req.Roller)
@@ -611,7 +615,7 @@ func breachWithPrivateKey(ship, privateKey, passphrase, seed, rollerEndpoint str
 		}
 		seed = generated
 	}
-	privKey, derivedPubkey, pointInfo, networkKeys, _, err := libprg.ValidateKey(context.Background(), ship, privateKey, passphrase, seed, true)
+	privKey, derivedPubkey, pointInfo, networkKeys, _, err := libprg.ValidateKey(context.Background(), ship, privateKey, passphrase, seed, true, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", libprg.ErrKeyMaterial, err)
 	}

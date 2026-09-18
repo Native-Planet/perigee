@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -171,11 +172,6 @@ type RollerConfig struct {
 	BatchInterval int    `json:"batchInterval"`
 	ChainID       int    `json:"chainId"`
 	ContractData  string `json:"contractData"`
-}
-
-type BatchInfo struct {
-	TimeUntilNext int `json:"timeUntilNext"`
-	BatchSize     int `json:"batchSize"`
 }
 
 type ShipInfo struct {
@@ -861,16 +857,17 @@ func (c *Client) GetPendingByAddress(ctx context.Context, address string) ([]Pen
 	return pending, nil
 }
 
-func (c *Client) WhenNextBatch(ctx context.Context) (*BatchInfo, error) {
-	result, err := c.DoRequest(ctx, "whenNextBatch", struct{}{})
+func (c *Client) WhenNextBatch(ctx context.Context) (time.Duration, error) {
+	raw, err := c.DoRequest(ctx, "whenNextBatch", struct{}{})
 	if err != nil {
-		return nil, fmt.Errorf("get next batch info: %w", err)
+		return 0, fmt.Errorf("rpc: %w", err)
 	}
-	var batchInfo BatchInfo
-	if err := json.Unmarshal(result, &batchInfo); err != nil {
-		return nil, fmt.Errorf("unmarshal batch info: %w", err)
+	var nextBatchMS int64
+	if err := json.Unmarshal(raw, &nextBatchMS); err != nil {
+		return 0, fmt.Errorf("decode: %w", err)
 	}
-	return &batchInfo, nil
+	target := time.UnixMilli(nextBatchMS).UTC()
+	return time.Until(target), nil
 }
 
 // ships owned by an address
@@ -901,8 +898,8 @@ func (c *Client) GetUnspawned(ctx context.Context, point string) ([]ShipInfo, er
 	if err != nil {
 		return nil, fmt.Errorf("get unspawned: %w", err)
 	}
-	var unspawned []ShipInfo
-	if err := json.Unmarshal(result, &unspawned); err != nil {
+	unspawned, err := decodeShipInfoList(result)
+	if err != nil {
 		return nil, fmt.Errorf("unmarshal unspawned ships: %w", err)
 	}
 	return unspawned, nil
@@ -1087,9 +1084,50 @@ func (c *Client) GetSpawned(ctx context.Context, point interface{}) ([]ShipInfo,
 	if err != nil {
 		return nil, fmt.Errorf("get spawned: %w", err)
 	}
-	var spawned []ShipInfo
-	if err := json.Unmarshal(result, &spawned); err != nil {
+	spawned, err := decodeShipInfoList(result)
+	if err != nil {
 		return nil, fmt.Errorf("unmarshal spawned ships: %w", err)
 	}
 	return spawned, nil
+}
+
+func decodeShipInfoList(raw []byte) ([]ShipInfo, error) {
+	var ships []ShipInfo
+	if err := json.Unmarshal(raw, &ships); err == nil {
+		// if empty list or clearly shaped structs, accept
+		if len(ships) == 0 || ships[0].Name != "" || ships[0].Address != "" {
+			return ships, nil
+		}
+	}
+
+	var names []string
+	if err := json.Unmarshal(raw, &names); err == nil {
+		out := make([]ShipInfo, len(names))
+		for i, n := range names {
+			out[i] = ShipInfo{Name: rollerEnsureTildePrefix(n)}
+		}
+		return out, nil
+	}
+
+	var nums []uint32
+	if err := json.Unmarshal(raw, &nums); err == nil {
+		out := make([]ShipInfo, len(nums))
+		for i, n := range nums {
+			p, err := co.Point2Patp(big.NewInt(int64(n)))
+			if err != nil {
+				return nil, fmt.Errorf("convert point %d to patp: %w", n, err)
+			}
+			out[i] = ShipInfo{Name: p}
+		}
+		return out, nil
+	}
+
+	return nil, fmt.Errorf("unexpected ship list format")
+}
+
+func rollerEnsureTildePrefix(patp string) string {
+	if strings.HasPrefix(patp, "~") {
+		return patp
+	}
+	return "~" + patp
 }

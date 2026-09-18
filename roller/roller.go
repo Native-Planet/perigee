@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Native-Planet/perigee/aura"
 	"github.com/Native-Planet/perigee/types"
@@ -124,7 +125,7 @@ func (r *Roller) GetPendingByAddress(ctx context.Context, address string) ([]typ
 	return r.client.GetPendingByAddress(ctx, address)
 }
 
-func (r *Roller) WhenNextBatch(ctx context.Context) (*types.BatchInfo, error) {
+func (r *Roller) WhenNextBatch(ctx context.Context) (time.Duration, error) {
 	return r.client.WhenNextBatch(ctx)
 }
 

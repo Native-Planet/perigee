@@ -1,0 +1,11 @@
+|%
++  title     "Pontifex"
++  info      "Static Pontifex bundle and roller proxy agent."
++  color     0x5c.8d73
++  image     ~
++  base      'pontifex'
++  version   [0 0 1]
++  website   "https://github.com/Native-Planet/perigee"
++  license   'MIT'
++  glob-http 'https://example.com/pontifex.tgz'
+--

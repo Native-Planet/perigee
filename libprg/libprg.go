@@ -296,7 +296,7 @@ func Breach(ctx context.Context, point, ticket, passphrase, seed string) (interf
 		}
 		tx, err := setL1NetworkKeys(ctx, point, pointInfo, wallet, true)
 		if err != nil {
-			return types.Transaction{}, fmt.Errorf("%w: %v", ErrKeyMaterial, err)
+			return types.Transaction{}, fmt.Errorf("configure L1 network keys for %s: %w", patp, err)
 		}
 		ethClient, err := ethclient.DialContext(ctx, EthProvider)
 		if err != nil {
@@ -450,9 +450,11 @@ func Keyfile(ctx context.Context, point, masterTicket, passphrase string, life i
 // newTransactor builds a keyed transactor for the client's chain with a gas
 // price set, bound to ctx.
 func newTransactor(ctx context.Context, client *ethclient.Client, privateKey *ecdsa.PrivateKey) (*bind.TransactOpts, error) {
-	chainID, err := client.NetworkID(ctx)
+	chainID, err := ethereumRead(ctx, "net_version", 3, func() (*big.Int, error) {
+		return client.NetworkID(ctx)
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get network ID: %v", err)
+		return nil, fmt.Errorf("failed to get network ID: %w", err)
 	}
 	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
 	if err != nil {
@@ -480,7 +482,7 @@ func newEclipticSession(ctx context.Context, privateKey *ecdsa.PrivateKey) (*ecl
 		client.Close()
 		return nil, nil, err
 	}
-	eclip, err := ecliptic.NewEcliptic(common.HexToAddress(EclipticContract), client)
+	eclip, err := ecliptic.NewEcliptic(common.HexToAddress(EclipticContract), ethereumBackend{client})
 	if err != nil {
 		client.Close()
 		return nil, nil, fmt.Errorf("failed to bind Ecliptic contract: %v", err)
@@ -503,7 +505,7 @@ func setL1NetworkKeys(ctx context.Context, patp string, point *types.Point, wall
 	}
 	privateKey, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
 	if err != nil {
-		return &ethTypes.Transaction{}, fmt.Errorf("failed to get private key: %v", err)
+		return &ethTypes.Transaction{}, fmt.Errorf("%w: failed to get ownership private key: %v", ErrKeyMaterial, err)
 	}
 	publicCrypt, err := addHexPrefix(wallet.Network.Keys.Crypt.Public)
 	if err != nil {
@@ -901,19 +903,17 @@ func randInt(max int) (int, error) {
 }
 
 func getGas(ctx context.Context, client *ethclient.Client, auth *bind.TransactOpts, maxRetries int) error {
-	for i := 0; i < maxRetries; i++ {
-		if auth.GasPrice == nil || auth.GasPrice.Cmp(big.NewInt(0)) == 0 {
-			gasPrice, err := client.SuggestGasPrice(ctx)
-			if err == nil {
-				auth.GasPrice = gasPrice
-				return nil
-			}
-			time.Sleep(time.Second * 2)
-			continue
-		}
+	if auth.GasPrice != nil && auth.GasPrice.Sign() > 0 {
 		return nil
 	}
-	return fmt.Errorf("failed to fetch gas price after %d retries", maxRetries)
+	gasPrice, err := ethereumRead(ctx, "eth_gasPrice", maxRetries, func() (*big.Int, error) {
+		return client.SuggestGasPrice(ctx)
+	})
+	if err != nil {
+		return err
+	}
+	auth.GasPrice = gasPrice
+	return nil
 }
 
 func waitForReceipt(ctx context.Context, client *ethclient.Client, tx *ethTypes.Transaction) (*ethTypes.Receipt, error) {

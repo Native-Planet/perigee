@@ -93,6 +93,7 @@ func init() {
 	rootCmd.AddCommand(cli.ModEscapeCmd)
 	rootCmd.AddCommand(cli.ModCancelEscapeCmd)
 	rootCmd.AddCommand(cli.ModAdoptCmd)
+	rootCmd.AddCommand(cli.NewSpawnCmd())
 }
 
 func runServer() error {

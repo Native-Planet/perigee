@@ -10,7 +10,7 @@ Additionally, it contains a library (`github.com/Native-Planet/perigee/libprg`) 
 
 Big thanks to [stephenlacy](https://github.com/stephenlacy/go-urbit), [nathanlever](https://github.com/nathanlever/keygen) and everyone who worked on [Bridge](https://github.com/urbit/bridge) and [urbit-key-generation](https://github.com/urbit/urbit-key-generation) for doing the hard parts.
 
-~~For now this library can only perform L2 transactions.~~ *Now with L1!* ✅
+Supports L1 transactions through Ethereum and L2 transactions through the roller.
 
 Set the `ROLLER_URL` env var for custom roller. Set the `ADMIN_TOKEN` env var if you want authentication in server mode.
 
@@ -168,6 +168,33 @@ perigee cancel-escape --point=sampel-palnet adoptee=sampel --master-ticket=sampe
 perigee adopt --point=sampel adoptee=sampel-palnet --master-ticket=sampel-palnet-sampel-palnet
 ```
 
+
+### `spawn`
+
+Spawn a star from a galaxy or a planet from a star, signed by the parent owner
+or spawn proxy:
+
+```bash
+ETH_PROVIDER=https://your-ethereum-rpc.example perigee spawn \
+  --point=~zod --child=~marzod \
+  --private-key="$PARENT_PRIVATE_KEY" --owner="$RECIPIENT_ADDRESS"
+```
+
+Use `--master-ticket` and optional `--passphrase` instead of `--private-key` for
+a parent ticket. The parent's dominion determines the route: `l1` uses Ethereum;
+`l2` and `spawn` use the roller. L1 requires `ETH_PROVIDER` and ETH for gas in
+the signing account. The command returns the submitted transaction as JSON.
+
+When the recipient differs from the signer, the recipient receives transfer
+rights and must accept ownership through Ecliptic's `transferPoint` on L1.
+
+The Go library exposes `libprg.Spawn` for an explicit recipient and
+`libprg.SpawnRandomOwner` for a generated child ticket. For the generated-owner
+flow, `accept` claims ownership and `autoKey` claims ownership and configures
+network keys. L1 follow-up transactions require ETH at the generated child
+ownership address. Pass both options as false to submit only the spawn and
+receive the ticket and address for funding and subsequent setup. Save the result
+even when an error is returned: it contains the ticket and submitted transactions.
 
 ### Todo
 

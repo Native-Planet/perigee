@@ -101,8 +101,7 @@ func Spawn(ctx context.Context, parentPoint, masterTicket, passphrase, spawnPoin
 	if err != nil {
 		return types.Transaction{}, fmt.Errorf("invalid owner address: %v", err)
 	}
-	l2Only := pointInfo.Dominion == "l2" || pointInfo.Dominion == "spawn" ||
-		strings.EqualFold(pointInfo.Ownership.TransferProxy.Address, "0x0000000000000000000000000000000000000000")
+	l2Only := pointInfo.Dominion == "l2" || pointInfo.Dominion == "spawn"
 
 	if l2Only {
 		tx, err := roller.Client.Spawn(ctx, parentPatp, spawnPatp, normalizedOwner, derivedPubkey, privateKey)
@@ -112,12 +111,13 @@ func Spawn(ctx context.Context, parentPoint, masterTicket, passphrase, spawnPoin
 		return *tx, nil
 	}
 
-	return l1Spawn(ctx, spawnPatp, normalizedOwner, derivedPubkey, privateKey)
+	return l1Spawn(ctx, parentInt, spawnPatp, normalizedOwner, derivedPubkey, privateKey)
 }
 
 // SpawnRandomOwner generates a child ticket and spawns to its ownership address.
-// An empty spawnPoint selects an available child. For L2, accept claims ownership
-// and autoKey configures network keys. The result retains the ticket and completed
+// An empty spawnPoint selects an available child. Accept claims ownership; autoKey
+// claims ownership and configures network keys. L1 child transactions require ETH
+// at the generated ownership address. The result retains the ticket and completed
 // transactions when a subsequent operation fails.
 func SpawnRandomOwner(ctx context.Context, parentPoint, masterTicket, passphrase, spawnPoint string, accept bool, autoKey bool) (types.SpawnResult, error) {
 	var patp string
@@ -150,10 +150,6 @@ func SpawnRandomOwner(ctx context.Context, parentPoint, masterTicket, passphrase
 	if err != nil {
 		return types.SpawnResult{}, fmt.Errorf("get parent info: %v", err)
 	}
-	l2Only := parentInfo.Point.Dominion == "l2" ||
-		parentInfo.Point.Dominion == "spawn" ||
-		strings.EqualFold(parentInfo.Point.Ownership.TransferProxy.Address, "0x0000000000000000000000000000000000000000")
-
 	result := types.SpawnResult{
 		Ship: pointInt, Patp: patp, ParentPatp: parentInfo.PatpName,
 		Ticket: ticket, Owner: ownerAddr, Dominion: parentInfo.Point.Dominion,
@@ -166,47 +162,54 @@ func SpawnRandomOwner(ctx context.Context, parentPoint, masterTicket, passphrase
 	}
 
 	result.SpawnTx = spawnTx
-	if !l2Only {
-		if tx, ok := spawnTx.(*ethTypes.Transaction); ok {
-			client, err := ethclient.DialContext(ctx, EthProvider)
-			if err != nil {
-				return result, fmt.Errorf("failed to connect to Ethereum: %v", err)
-			}
-			defer client.Close()
-			if _, err := waitForReceipt(ctx, client, tx); err != nil {
-				return result, fmt.Errorf("waiting for spawn receipt: %v", err)
-			}
-			childPriv, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
-			if err != nil {
-				return result, fmt.Errorf("child private key: %v", err)
-			}
-			actTx, err := l1Activate(ctx, patp, childPriv, client)
-			if err != nil {
-				return result, fmt.Errorf("activate: %v", err)
-			}
-			result.ActivateTx = actTx
-		}
-	} else if accept || autoKey {
+	_, l2Only := spawnTx.(types.Transaction)
+	if accept || autoKey {
 		childPriv, err := crypto.HexToECDSA(wallet.Ownership.Keys.Private)
 		if err != nil {
 			return result, fmt.Errorf("child private key: %v", err)
 		}
-		if accept {
+		if l2Only {
 			tx, err := roller.Client.TransferPoint(ctx, patp, true, ownerAddr, wallet.Ownership.Keys.Address, childPriv)
 			if err != nil {
 				return result, fmt.Errorf("accept transfer: %v", err)
 			}
 			result.AcceptTx = *tx
+			if autoKey {
+				tx, err := roller.Client.ConfigureKeys(ctx, patp,
+					"0x"+wallet.Network.Keys.Crypt.Public,
+					"0x"+wallet.Network.Keys.Auth.Public,
+					false, wallet.Ownership.Keys.Address, childPriv)
+				if err != nil {
+					return result, fmt.Errorf("configure child keys: %v", err)
+				}
+				result.KeysTx = *tx
+			}
+		} else {
+			session, client, err := newEclipticSession(ctx, childPriv)
+			if err != nil {
+				return result, fmt.Errorf("prepare child acceptance: %w", err)
+			}
+			defer client.Close()
+			if _, err := waitForReceipt(ctx, client, spawnTx.(*ethTypes.Transaction)); err != nil {
+				return result, fmt.Errorf("waiting for spawn receipt: %w", err)
+			}
+			tx, err := session.TransferPoint(pointInt, common.HexToAddress(ownerAddr), true)
+			if err != nil {
+				return result, fmt.Errorf("accept transfer: %w", err)
+			}
+			result.AcceptTx = tx
+			if autoKey {
+				if _, err := waitForReceipt(ctx, client, tx); err != nil {
+					return result, fmt.Errorf("waiting for acceptance receipt: %w", err)
+				}
+				tx, err := setL1NetworkKeys(ctx, patp, &types.Point{}, wallet, false)
+				if err != nil {
+					return result, fmt.Errorf("configure child keys: %w", err)
+				}
+				result.KeysTx = tx
+			}
 		}
 		if autoKey {
-			tx, err := roller.Client.ConfigureKeys(ctx, patp,
-				"0x"+wallet.Network.Keys.Crypt.Public,
-				"0x"+wallet.Network.Keys.Auth.Public,
-				false, wallet.Ownership.Keys.Address, childPriv)
-			if err != nil {
-				return result, fmt.Errorf("configure child keys: %v", err)
-			}
-			result.KeysTx = *tx
 			result.NetworkKeys = &types.NetworkKeys{
 				Crypt: types.KeyPair{
 					Private: wallet.Network.Keys.Crypt.Private,
@@ -581,7 +584,7 @@ func l1CancelEscape(ctx context.Context, point string, privateKey *ecdsa.Private
 	return session.CancelEscape(pointInt)
 }
 
-func l1Spawn(ctx context.Context, spawnPoint, owner string, signer string, privateKey *ecdsa.PrivateKey) (*ethTypes.Transaction, error) {
+func l1Spawn(ctx context.Context, parent uint32, spawnPoint, owner string, signer string, privateKey *ecdsa.PrivateKey) (*ethTypes.Transaction, error) {
 	_, spawnInt, err := types.ValidateAndNormalizePatp(spawnPoint)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidPoint, err)
@@ -591,47 +594,29 @@ func l1Spawn(ctx context.Context, spawnPoint, owner string, signer string, priva
 		return nil, err
 	}
 	defer client.Close()
-	// best-effort preflight checks against Azimuth
 	azAddress, err := session.Contract.Azimuth(&session.CallOpts)
-	if err == nil {
-		if az, err := azimuth.NewAzimuth(azAddress, client); err == nil {
-			if live, err := az.IsLive(&session.CallOpts, spawnInt); err == nil && live {
-				return nil, fmt.Errorf("child %s already active", spawnPoint)
-			}
-			if canSpawn, err := az.CanSpawnAs(&session.CallOpts, spawnInt, common.HexToAddress(signer)); err == nil && !canSpawn {
-				return nil, fmt.Errorf("signer %s cannot spawn %s", signer, spawnPoint)
-			}
-		}
-	}
-	return session.Spawn(spawnInt, common.HexToAddress(owner))
-}
-
-func l1Activate(ctx context.Context, point string, privateKey *ecdsa.PrivateKey, client *ethclient.Client) (*ethTypes.Transaction, error) {
-	_, pointInt, err := types.ValidateAndNormalizePatp(point)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidPoint, err)
-	}
-	auth, err := newTransactor(ctx, client, privateKey)
-	if err != nil {
-		return nil, err
-	}
-	eclip, err := ecliptic.NewEcliptic(common.HexToAddress(EclipticContract), client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to bind Ecliptic contract: %v", err)
-	}
-	azAddress, err := eclip.Azimuth(&bind.CallOpts{From: auth.From, Context: ctx})
-	if err != nil {
-		return nil, fmt.Errorf("failed to load azimuth address: %v", err)
+		return nil, fmt.Errorf("load Azimuth address: %w", err)
 	}
 	az, err := azimuth.NewAzimuth(azAddress, client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to bind Azimuth contract: %v", err)
+		return nil, fmt.Errorf("bind Azimuth: %w", err)
 	}
-	session := &azimuth.AzimuthSession{
-		Contract:     az,
-		TransactOpts: *auth,
+	childOwner, err := az.GetOwner(&session.CallOpts, spawnInt)
+	if err != nil {
+		return nil, fmt.Errorf("get child owner: %w", err)
 	}
-	return session.ActivatePoint(pointInt)
+	if childOwner != (common.Address{}) {
+		return nil, fmt.Errorf("child %s already spawned", spawnPoint)
+	}
+	canSpawn, err := az.CanSpawnAs(&session.CallOpts, parent, common.HexToAddress(signer))
+	if err != nil {
+		return nil, fmt.Errorf("check parent spawn permission: %w", err)
+	}
+	if !canSpawn {
+		return nil, fmt.Errorf("signer %s cannot spawn %s", signer, spawnPoint)
+	}
+	return session.Spawn(spawnInt, common.HexToAddress(owner))
 }
 
 // Transfer Ownership (L1)
@@ -920,6 +905,9 @@ func waitForReceipt(ctx context.Context, client *ethclient.Client, tx *ethTypes.
 	for {
 		receipt, err := client.TransactionReceipt(ctx, tx.Hash())
 		if err == nil {
+			if receipt.Status != ethTypes.ReceiptStatusSuccessful {
+				return receipt, fmt.Errorf("Ethereum transaction %s reverted", tx.Hash())
+			}
 			return receipt, nil
 		}
 		select {

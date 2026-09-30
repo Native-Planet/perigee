@@ -87,7 +87,6 @@ type SpawnResult struct {
 	SpawnProxy  string       `json:"spawnProxy,omitempty"`
 	ManageProxy string       `json:"manageProxy,omitempty"`
 	SpawnTx     interface{}  `json:"spawnTx"`
-	ActivateTx  interface{}  `json:"activateTx,omitempty"`
 	AcceptTx    interface{}  `json:"acceptTx,omitempty"`
 	KeysTx      interface{}  `json:"keysTx,omitempty"`
 	NetworkKeys *NetworkKeys `json:"networkKeys,omitempty"`

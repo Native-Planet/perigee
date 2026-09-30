@@ -70,7 +70,7 @@ func TestSpawnAuthorizationAndRouting(t *testing.T) {
 		{name: "owner", role: "own", dominion: "l2"},
 		{name: "spawn proxy", role: "spawn", dominion: "l2"},
 		{name: "spawn dominion", role: "spawn", dominion: "spawn"},
-		{name: "zero transfer proxy", role: "spawn", dominion: "l1", transferProxy: "0x" + strings.Repeat("0", 40)},
+		{name: "zero transfer proxy", role: "spawn", dominion: "l2", transferProxy: "0x" + strings.Repeat("0", 40)},
 		{name: "management proxy denied", role: "manage", dominion: "l2", wantErr: ErrKeyMaterial},
 		{name: "unrelated child denied", role: "own", dominion: "l2", child: patpFor(t, 258), wantErr: ErrInvalidPoint},
 		{name: "parent is not child", role: "own", dominion: "l2", child: patpFor(t, 1), wantErr: ErrInvalidPoint},

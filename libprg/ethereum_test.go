@@ -166,6 +166,7 @@ func TestEthereumRetryRespectsCancellation(t *testing.T) {
 type ethereumTestRequest struct {
 	ID     json.RawMessage `json:"id"`
 	Method string          `json:"method"`
+	Params json.RawMessage `json:"params"`
 }
 
 func withEthereumRPC(t *testing.T, handle func(http.ResponseWriter, ethereumTestRequest)) {

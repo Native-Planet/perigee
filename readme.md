@@ -196,6 +196,12 @@ ownership address. Pass both options as false to submit only the spawn and
 receive the ticket and address for funding and subsequent setup. Save the result
 even when an error is returned: it contains the ticket and submitted transactions.
 
+### Bridge planet codes
+
+`libprg.GeneratePlanetCode(planet)` returns a private activation code, its invite ownership address, and a `https://bridge.urbit.org/#…` redemption link. Save the result before submitting a transaction. `SpawnPlanetCode(ctx, parent, parentKey, passphrase, code)` submits an L2 spawn to that address. Once the roller exposes the transfer rights, `AcceptPlanetCode(ctx, code)` completes the handoff to the invite wallet. Reconcile uncertain submissions before retrying; the helpers do not configure network keys.
+
+The activation code combines a 64-bit invite secret with the planet name in Bridge's format. `ParsePlanetCode` derives the invite address and `PlanetCodeFromTicket` formats an existing invite secret. Bridge creates the recipient's fresh master ticket in their browser and transfers control to it during redemption. Keep an unredeemed code private. Tests compare address derivation against Bridge's `urbit-key-generation@0.19.0` implementation.
+
 ### Todo
 
 - uhh finish the half-finished bridge alternative frontend that serves on the root path. it can breach and escape but i got sidetracked before i got hardware wallet support fully functional

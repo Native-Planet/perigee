@@ -1,0 +1,18 @@
+[
+  {
+    "planet": "~sampel-palnet",
+    "entropy": "0001020304050607",
+    "ticket": "~doznec-binwes-samper-siglet",
+    "code": "~doznec-binwes-samper-siglet-sampel-palnet",
+    "url": "https://bridge.urbit.org/#doznec-binwes-samper-siglet-sampel-palnet",
+    "owner": "0x5EfED9f04129342e83c92dd8eB26332b05afb989"
+  },
+  {
+    "planet": "~sampel-sampel",
+    "entropy": "ffffffffffffffff",
+    "ticket": "~fipfes-fipfes-fipfes-fipfes",
+    "code": "~fipfes-fipfes-fipfes-fipfes-sampel-sampel",
+    "url": "https://bridge.urbit.org/#fipfes-fipfes-fipfes-fipfes-sampel-sampel",
+    "owner": "0xC648FF366c56BB9aFcF5E15d1EA135Ed592e4060"
+  }
+]
